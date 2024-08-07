@@ -8,4 +8,4 @@ This small thingie is primarily designed for bars like [waybar](https://github.c
 
 *there will be a GIF when I actually get it to work*
 
-*other stuff coming as well like building, using, config, etc.*
+*other stuff coming as well like building, using, configuration, etc.*
