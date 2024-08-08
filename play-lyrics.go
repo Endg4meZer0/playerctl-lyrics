@@ -97,7 +97,7 @@ func WriteLyrics(lyricsTimer *time.Timer, instrTicker *time.Ticker, currentLyric
 		// then reset an instrumental ticker until the first lyric shows up
 		if currentTimestamp < firstTimestamp {
 			instrTicker.Reset(time.Second)
-		} else if *isPlaying { // If paused then don't print the lyric and instead try once more
+		} else if *isPlaying { // If paused then don't print the lyric and instead try once more time later
 			if lyric == "" {
 				// An empty lyric is basically instrumental part, so we reset the instrumental ticker and moving on
 				instrTicker.Reset(time.Second)
@@ -118,13 +118,18 @@ func WriteLyrics(lyricsTimer *time.Timer, instrTicker *time.Ticker, currentLyric
 		lyricsTimer.Reset(lyricsTimerDuration)
 		if lyricsTimerDuration/time.Millisecond > 2500 {
 			positionCheckTicker := time.NewTicker(2.5 * 1000 * time.Millisecond)
+			expectedTicks := int(math.Floor(float64(lyricsTimerDuration/time.Millisecond/1000) / 2.5))
+			currentTick := 0
 			go func() {
 				for {
 					<-positionCheckTicker.C
+					currentTick++
 					receivedPosition := GetCurrentSongPosition()
-					if receivedPosition < currentTimestamp || receivedPosition > nextLyricTimestamp {
-						lyricsTimer.Reset(1)
+					if receivedPosition < currentLyricTimestamp || receivedPosition > nextLyricTimestamp || currentTick >= expectedTicks {
 						positionCheckTicker.Stop()
+						if currentTick < expectedTicks {
+							lyricsTimer.Reset(1)
+						}
 						return
 					}
 				}
