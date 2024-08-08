@@ -1,11 +1,13 @@
-# Hold up!
-**It's still only an idea that I'm developing and there's NO actual working release yet! Please, be patient!**
-
 # playerctl-lyrics
-Uses `playerctl metadata` output to get song data and makes a GET request to https://lrclib.net/ to get synced lyrics. These synced lyrics are then printed to stdout in sync with `playerctl position`.
+Uses `playerctl metadata` output to get song data and makes a GET request to https://lrclib.net/ to get the song's synced lyrics. These lyrics are then printed to stdout in sync with `playerctl position`.
 
 This small thingie is primarily designed for bars like [waybar](https://github.com/Alexays/Waybar).
 
-*there will be a GIF when I actually get it to work*
+https://github.com/user-attachments/assets/b3107a9a-eabf-4d76-a6da-ac82fc911569
 
-*other stuff coming as well like building, using, configuration, etc.*
+## TODO
+- [ ] Better error handling
+- [ ] Configuration
+- [ ] Flag usage
+- [ ] Some simple caching system
+- [ ] There is always more!
