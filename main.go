@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"os"
 	"os/exec"
@@ -14,8 +13,9 @@ func main() {
 	// TODO: The main functionality, the PURPOSE!
 	// TODO: An actual config implementation
 	// TODO: Flags implementation
+	// TODO: At least some sort of caching system (using .lrc files from LrcLib should suffice)
 	// there's definitely always more!
-	// FIXME: parsing urls is done kinda wrong
+	// FIXME: parsing urls is done kinda wrong, so e.g. Panchiko - D>E>A>T>H>M>E>T>A>L fails horribly
 
 	// Check if `playerctl` is installed
 	err := exec.Command("playerctl", "--version").Run()
@@ -24,7 +24,6 @@ func main() {
 		log.Fatalln("playerctl is not found!")
 	}
 
-	fmt.Println("helo")
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 
