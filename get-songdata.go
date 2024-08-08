@@ -40,3 +40,25 @@ func GetCurrentSongData() SongData {
 
 	return SongData{Song: song, Artist: artist, Album: album, Duration: duration}
 }
+
+func GetCurrentSongStatus() bool {
+	output, err := exec.Command("playerctl", "status").Output()
+	if err != nil {
+		log.Fatalln(err)
+	}
+	return string(output) == "Playing\n"
+}
+
+func GetCurrentSongPosition() float64 {
+	output, err := exec.Command("playerctl", "position").Output()
+	if err != nil {
+		log.Fatalln(err)
+	}
+	soutput, _ := strings.CutSuffix(string(output), "\n")
+	currentTimestamp, err := strconv.ParseFloat(soutput, 64)
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	return currentTimestamp
+}
