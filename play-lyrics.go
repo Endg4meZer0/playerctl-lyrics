@@ -12,6 +12,7 @@ func PlayLyrics() {
 	var currentLyrics map[float64]string
 	var currentlyInstrumental bool
 	var currentSongIsNotFound bool
+	var noPlayersFound bool
 	var isPlaying bool
 
 	lyricsTimer := time.NewTimer(time.Second)
@@ -29,6 +30,14 @@ func PlayLyrics() {
 	go func() {
 		for {
 			<-songChanged
+			if currentSong.Song == "" && currentSong.Artist == "" && currentSong.Album == "" {
+				fullLyrChan <- nil
+				noPlayersFound = true
+				continue
+			} else {
+				noPlayersFound = false
+			}
+
 			lyr, instr := GetSyncedLyrics(&currentSong)
 			if lyr == nil {
 				currentSongIsNotFound = !instr
@@ -59,7 +68,7 @@ func PlayLyrics() {
 			currentLyrics = <-fullLyrChan
 			lyricsTimer.Stop()
 			instrTicker.Stop()
-			go WriteLyrics(lyricsTimer, instrTicker, &currentLyrics, &isPlaying, &currentlyInstrumental)
+			go WriteLyrics(lyricsTimer, instrTicker, &currentLyrics, &isPlaying, &currentlyInstrumental, &noPlayersFound)
 			/*
 				Timer is made like this:
 				1) get the lyric from the map based on timestamp (we need the next lyric AFTER that timestamp)
@@ -71,8 +80,11 @@ func PlayLyrics() {
 	}()
 }
 
-func WriteLyrics(lyricsTimer *time.Timer, instrTicker *time.Ticker, currentLyrics *map[float64]string, isPlaying *bool, currentlyInstrumental *bool) {
-	if *currentlyInstrumental {
+func WriteLyrics(lyricsTimer *time.Timer, instrTicker *time.Ticker, currentLyrics *map[float64]string, isPlaying *bool, currentlyInstrumental *bool, noPlayersFound *bool) {
+	if *noPlayersFound {
+		instrTicker.Stop()
+		fmt.Println()
+	} else if *currentlyInstrumental {
 		instrTicker.Reset(time.Second)
 	} else {
 		*isPlaying = GetCurrentSongStatus()
@@ -136,7 +148,7 @@ func WriteLyrics(lyricsTimer *time.Timer, instrTicker *time.Ticker, currentLyric
 		}
 		go func() {
 			<-lyricsTimer.C
-			go WriteLyrics(lyricsTimer, instrTicker, currentLyrics, isPlaying, currentlyInstrumental)
+			go WriteLyrics(lyricsTimer, instrTicker, currentLyrics, isPlaying, currentlyInstrumental, noPlayersFound)
 		}()
 	}
 }
