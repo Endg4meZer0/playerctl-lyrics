@@ -110,8 +110,7 @@ func WriteLyrics(lyricsTimer *time.Timer, instrTicker *time.Ticker, currentLyric
 				// and if it's too different (not in a Xs window where X is time set in config (TODO btw, rn it's 2.5s)) that means it got changed
 				// also compare songs (?)
 				instrTicker.Stop()
-				fmt.Println()
-				fmt.Print(lyric)
+				fmt.Println(lyric)
 			}
 		}
 		lyricsTimerDuration := time.Duration(int64(math.Abs(nextLyricTimestamp-currentTimestamp)*1000)) * time.Millisecond
@@ -154,11 +153,10 @@ func WriteInstrumental(channel <-chan time.Time, isPlaying *bool, currentSongIsN
 		if !*isPlaying {
 			continue
 		} else {
-			fmt.Println()
 			if *currentSongIsNotFound {
-				fmt.Print("Current song was not found on LrcLib! " + strings.Repeat(note, i%4))
+				fmt.Println("Current song was not found on LrcLib! " + strings.Repeat(note, i%4))
 			} else {
-				fmt.Print(strings.Repeat(note, i%4))
+				fmt.Println(strings.Repeat(note, i%4))
 			}
 			i++
 			// Don't want to cause any overflow here
