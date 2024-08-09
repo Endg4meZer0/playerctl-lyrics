@@ -89,10 +89,17 @@ func WriteLyrics(lyricsTimer *time.Timer, instrTicker *time.Ticker, currentLyric
 	} else {
 		*isPlaying = GetCurrentSongStatus()
 		currentTimestamp := GetCurrentSongPosition()
-		firstTimestamp := 6000.0 // maybe there is a better way to get the first key of a map?
+		playerUsesIntegerPosition := false
+		if _, d := math.Modf(currentTimestamp); d < 0.000100 {
+			// if a floating part is less than this value (tested on cmus, may differ between players)
+			// then make an assumption that the player uses integers as position markers
+			// 99% sure it can be done better but since it works as of now...
+			playerUsesIntegerPosition = true
+		}
+		firstTimestamp := 6000.0
 		currentLyricTimestamp := -1.0
 		nextLyricTimestamp := 6000.0
-		lyric := "test value"
+		lyric := ""
 		for lyricTimestamp, l := range *currentLyrics {
 			if firstTimestamp > lyricTimestamp {
 				firstTimestamp = lyricTimestamp
@@ -111,18 +118,18 @@ func WriteLyrics(lyricsTimer *time.Timer, instrTicker *time.Ticker, currentLyric
 			instrTicker.Reset(time.Second)
 		} else if *isPlaying { // If paused then don't print the lyric and instead try once more time later
 			if lyric == "" {
-				// An empty lyric is basically instrumental part, so we reset the instrumental ticker and moving on
+				// An empty lyric basically means instrumental part,
+				// so we reset the instrumental ticker and moving on
 				instrTicker.Reset(time.Second)
 			} else {
 				// An actual lyric when all the conditions are met needs to
 				// 1) stop instrumental ticker
 				// 2) print itself
 				// 3) call the next writing goroutine
-				// compare the difference between new currentTimestamp and past currentTimestamp+(nextLyricTimestamp-currentTimestamp)
-				// and if it's too different (not in a Xs window where X is time set in config (TODO btw, rn it's 2.5s)) that means it got changed
-				// also compare songs (?)
 				instrTicker.Stop()
-				fmt.Println(lyric)
+				if !playerUsesIntegerPosition || math.Abs(nextLyricTimestamp-currentTimestamp) >= 1.0 {
+					fmt.Println(lyric)
+				}
 			}
 		}
 		lyricsTimerDuration := time.Duration(int64(math.Abs(nextLyricTimestamp-currentTimestamp)*1000)) * time.Millisecond
@@ -131,12 +138,13 @@ func WriteLyrics(lyricsTimer *time.Timer, instrTicker *time.Ticker, currentLyric
 			positionCheckTicker := time.NewTicker(2.5 * 1000 * time.Millisecond)
 			expectedTicks := int(math.Floor(float64(lyricsTimerDuration/time.Millisecond/1000) / 2.5))
 			currentTick := 0
+			// Resets the lyric timer if it sees an unusual position change
 			go func() {
 				for {
 					<-positionCheckTicker.C
 					currentTick++
 					receivedPosition := GetCurrentSongPosition()
-					if receivedPosition < currentLyricTimestamp || receivedPosition > nextLyricTimestamp || currentTick >= expectedTicks {
+					if receivedPosition < math.Floor(currentLyricTimestamp) || receivedPosition > math.Ceil(nextLyricTimestamp) || currentTick >= expectedTicks {
 						positionCheckTicker.Stop()
 						if currentTick < expectedTicks {
 							lyricsTimer.Reset(1)
