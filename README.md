@@ -1,5 +1,5 @@
 # playerctl-lyrics
-Uses `playerctl metadata` output to get song data and makes a GET request to https://lrclib.net/ to get the song's synced lyrics. These lyrics are then printed to stdout in sync with `playerctl position`.
+Uses `playerctl metadata` output to get song data and makes a GET request to https://lrclib.net/ to get the song's synced lyrics (if there are). These lyrics are then printed to stdout in sync with `playerctl position`.
 
 This small thingie is primarily designed for bars like [waybar](https://github.com/Alexays/Waybar).
 
