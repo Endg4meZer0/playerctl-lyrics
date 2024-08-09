@@ -17,7 +17,7 @@ func PlayLyrics() {
 
 	lyricsTimer := time.NewTimer(time.Second)
 	lyricsTimer.Stop()
-	instrTicker := time.NewTicker(time.Second)
+	instrTicker := time.NewTicker(500 * time.Millisecond)
 	instrTicker.Stop()                                                      // stopping because the ticker should be reset when it's needed, and Go doesn't close ticker's channel after stop
 	go WriteInstrumental(instrTicker.C, &isPlaying, &currentSongIsNotFound) // also starting the instrumental thread at the same time to not create additional instances and only work with the ticker
 
@@ -85,7 +85,7 @@ func WriteLyrics(lyricsTimer *time.Timer, instrTicker *time.Ticker, currentLyric
 		instrTicker.Stop()
 		fmt.Println()
 	} else if *currentlyInstrumental {
-		instrTicker.Reset(time.Second)
+		instrTicker.Reset(500 * time.Millisecond)
 	} else {
 		*isPlaying = GetCurrentSongStatus()
 		currentTimestamp := GetCurrentSongPosition()
@@ -115,12 +115,12 @@ func WriteLyrics(lyricsTimer *time.Timer, instrTicker *time.Ticker, currentLyric
 		// If the currentTimestamp is less than even the first timestamp of the lyrics
 		// then reset an instrumental ticker until the first lyric shows up
 		if currentTimestamp < firstTimestamp {
-			instrTicker.Reset(time.Second)
+			instrTicker.Reset(500 * time.Millisecond)
 		} else if *isPlaying { // If paused then don't print the lyric and instead try once more time later
 			if lyric == "" {
 				// An empty lyric basically means instrumental part,
 				// so we reset the instrumental ticker and moving on
-				instrTicker.Reset(time.Second)
+				instrTicker.Reset(500 * time.Millisecond)
 			} else {
 				// An actual lyric when all the conditions are met needs to
 				// 1) stop instrumental ticker
