@@ -6,7 +6,7 @@ This small thingie is primarily designed for bars like [waybar](https://github.c
 https://github.com/user-attachments/assets/b3107a9a-eabf-4d76-a6da-ac82fc911569
 
 ## Important!
-Players with integer-based position data like `cmus` will cause a lot of lyrics to mismatch with their accurate timings, potentionally skipping some at all. It *will* work, but nonetheless it is advised to use other players that have float-based position data. For example, `spotify` works perfectly.
+Players that use seconds as position data like `cmus` will cause a lot of lyrics to mismatch with their accurate timings, potentionally skipping some at all. It *will* work, but nonetheless it is advised to use other players that have more precise format for position data. For example, `spotify` works perfectly, since it uses milliseconds in position data.
 
 ## Build
 `go build` inside the directory should do the trick.
