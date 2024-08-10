@@ -13,7 +13,7 @@ import (
 
 // Make a URL to lrclib.net to send a GET request to
 func MakeURL(song *SongData) url.URL {
-	lrclibURL, err := url.Parse(fmt.Sprintf("http://lrclib.net/api/search?track_name=%v&artist_name=%v", song.Song, song.Artist))
+	lrclibURL, err := url.Parse("http://lrclib.net/api/search?" + url.PathEscape(fmt.Sprintf("track_name=%v&artist_name=%v", song.Song, song.Artist)))
 	if err != nil {
 		log.Fatalln(err)
 	}
@@ -22,7 +22,7 @@ func MakeURL(song *SongData) url.URL {
 
 // Make a URL to lrclib.net to send a GET request to
 func MakeURLWithAlbum(song *SongData) url.URL {
-	lrclibURL, err := url.Parse(fmt.Sprintf("http://lrclib.net/api/search?track_name=%v&artist_name=%v&album_name=%v", song.Song, song.Artist, song.Album))
+	lrclibURL, err := url.Parse("http://lrclib.net/api/search?" + url.PathEscape(fmt.Sprintf("track_name=%v&artist_name=%v&album_name=%v", song.Song, song.Artist, song.Album)))
 	if err != nil {
 		log.Fatalln(err)
 	}
@@ -73,8 +73,7 @@ func GetSyncedLyrics(song *SongData) (map[float64]string, bool) {
 }
 
 func SendLrcLibGetRequest(lrclibURL url.URL) []LrcLibJsonOutput {
-	urls := strings.ReplaceAll(lrclibURL.String(), " ", "%20")
-	resp, err := http.Get(urls)
+	resp, err := http.Get(lrclibURL.String())
 	if err != nil {
 		log.Fatalln(err)
 	}
