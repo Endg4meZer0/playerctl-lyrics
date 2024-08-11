@@ -2,4 +2,5 @@
 *debug*
 
 playerctl-lyrics
-stuff.txt
+*.txt
+.fuse_hidden*
