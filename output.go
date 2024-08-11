@@ -67,20 +67,12 @@ func WriteLyrics(lyricsTimer *time.Timer, instrTimer *time.Timer, currentLyrics 
 				// 2) print itself
 				// 3) call the next writing goroutine
 				instrTimer.Stop()
-				if !wasPaused { // if the playback was paused, that usually causes lyric to print itself twice, so here's a little fuse
+				if !wasPaused && (!playerUsesIntegerPosition || math.Abs(nextLyricTimestamp-currentTimestamp) >= 1.0) { // if the playback was paused, that usually causes lyric to print itself twice, so here's a little fuse
 					fmt.Println(lyric)
 				}
 			}
 		}
-		var lyricsTimerDuration time.Duration
-		if playerUsesIntegerPosition {
-			currentTimestampIntPart := math.Floor(currentTimestamp)
-			nextLyricTimestampIntPart := math.Floor(nextLyricTimestamp)
-
-			lyricsTimerDuration = time.Duration(int64(math.Abs(nextLyricTimestampIntPart-currentTimestampIntPart)*1000)) * time.Millisecond
-		} else {
-			lyricsTimerDuration = time.Duration(int64(math.Abs(nextLyricTimestamp-currentTimestamp)*1000)) * time.Millisecond
-		}
+		lyricsTimerDuration := time.Duration(int64(math.Abs(nextLyricTimestamp-currentTimestamp)*1000)) * time.Millisecond
 		lyricsTimer.Reset(lyricsTimerDuration)
 		if lyricsTimerDuration/time.Millisecond > 1500 {
 			positionCheckTicker := time.NewTicker(1.5 * 1000 * time.Millisecond)
