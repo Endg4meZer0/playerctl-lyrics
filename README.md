@@ -12,9 +12,9 @@ Players that use seconds as position data like `cmus` will cause a lot of lyrics
 `go build` inside the directory should do the trick.
 
 ## TODO
-- [ ] Better error handling
+- [x] Better error handling
+- [x] Some simple caching system
 - [ ] Configuration
-- [ ] Some simple caching system
 - [ ] Better handling of players with seconds as position data
 - [ ] Flag usage
 - [ ] There is always more!
