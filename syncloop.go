@@ -36,6 +36,9 @@ func SyncLoop() {
 			}
 
 			lyr := GetSyncedLyrics(&currentSong)
+			if currentSong.LyricsType == 5 {
+				currentSong.LyricsType = 6
+			}
 			fullLyrChan <- lyr
 		}
 	}()
