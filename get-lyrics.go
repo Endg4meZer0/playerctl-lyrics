@@ -51,29 +51,36 @@ func MakeURLSearch(song *SongData) url.URL {
 // Return either a slice of strings that correspond to song's lyrics and a 'false' or nil and 'true'.
 // If []string is nil AND bool is false, then it's an error.
 func GetSyncedLyrics(song *SongData) map[float64]string {
-	lrclibURL := MakeURLGet(song)
+	foundSong := GetCachedLyrics(song)
+	if !foundSong.Instrumental && foundSong.PlainLyrics == "" && foundSong.SyncedLyrics == "" {
+		lrclibURL := MakeURLGet(song)
 
-	foundSongs, found := SendRequest(lrclibURL)
+		foundSongs, found := SendRequest(lrclibURL)
 
-	if !found {
-		lrclibURL = MakeURLSearchWithAlbumAndDuration(song)
-		foundSongs, found = SendRequest(lrclibURL)
 		if !found {
-			lrclibURL = MakeURLSearchWithAlbum(song)
+			lrclibURL = MakeURLSearchWithAlbumAndDuration(song)
 			foundSongs, found = SendRequest(lrclibURL)
 			if !found {
-				lrclibURL = MakeURLSearch(song)
+				lrclibURL = MakeURLSearchWithAlbum(song)
 				foundSongs, found = SendRequest(lrclibURL)
+				if !found {
+					lrclibURL = MakeURLSearch(song)
+					foundSongs, found = SendRequest(lrclibURL)
+				}
 			}
 		}
-	}
 
-	if !found {
-		song.LyricsType = 3
-		return nil
-	}
+		if !found {
+			song.LyricsType = 3
+			return nil
+		}
 
-	foundSong := foundSongs[0]
+		foundSong = foundSongs[0]
+
+		if err := StoreCachedLyrics(song, foundSong); err != nil {
+			log.Println("Could not save the lyrics to the cache! Are there writing perms?")
+		}
+	}
 
 	if foundSong.Instrumental {
 		song.LyricsType = 2
@@ -92,27 +99,30 @@ func GetSyncedLyrics(song *SongData) map[float64]string {
 	syncedLyrics := strings.Split(foundSong.SyncedLyrics, "\n")
 	for _, lyric := range syncedLyrics {
 		lyricParts := strings.SplitN(lyric, " ", 2)
-		timecode := TimecodeStrToFloat(lyricParts[0])
+		timecode, err := TimecodeStrToFloat(lyricParts[0])
+		if err != nil {
+			continue
+		}
 		lyricStr := lyricParts[1]
 		result[timecode] = lyricStr
 	}
 	return result
 }
 
-func TimecodeStrToFloat(timecode string) float64 {
+func TimecodeStrToFloat(timecode string) (float64, error) {
 	// [00:00.00]
 	minutes, err := strconv.ParseFloat(timecode[1:3], 64)
 	if err != nil {
-		panic(err)
+		return -1, err
 	}
 	seconds, err := strconv.ParseFloat(timecode[4:9], 64)
 	if err != nil {
-		panic(err)
+		return -1, err
 	}
-	return minutes*60.0 + seconds
+	return minutes*60.0 + seconds, nil
 }
 
-func SendRequest(link url.URL) ([]LrcLibJsonOutput, bool) {
+func SendRequest(link url.URL) ([]LrcLibJson, bool) {
 	resp, err := http.Get(link.String())
 	if err != nil || resp.StatusCode != 200 {
 		return nil, false
@@ -124,7 +134,7 @@ func SendRequest(link url.URL) ([]LrcLibJsonOutput, bool) {
 		return nil, false
 	}
 
-	var foundSongs []LrcLibJsonOutput
+	var foundSongs []LrcLibJson
 	json.Unmarshal(body, &foundSongs)
 
 	return foundSongs, len(foundSongs) != 0

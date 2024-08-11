@@ -9,7 +9,7 @@ type SongData struct {
 	LyricsType byte
 }
 
-type LrcLibJsonOutput struct {
+type LrcLibJson struct {
 	Instrumental bool   `json:"instrumental"`
 	PlainLyrics  string `json:"plainLyrics"`
 	SyncedLyrics string `json:"syncedLyrics"`
