@@ -11,12 +11,24 @@ Players that use seconds as position data like `cmus` will cause a lot of lyrics
 ## Build
 `go build` inside the directory should do the trick.
 
+## Usage
+```
+playerctl-lyrics [OPTION]
+Launching without any options will start the main process that gets lyrics, syncs them with playerctl and prints them to stdout.
+
+Options:
+    -h, --help:													print this message and exit
+	-v, --version: 												print version and exit
+	--clear-cache SONGNAME ARTISTNAME [ALBUMNAME] [DURATION]:	clear cache files of the matching songs and exit
+	--clear-cache-dir:											clear cache directory and exit
+```
+
 ## TODO
-- [x] Better error handling
-- [x] Some simple caching system
+- [x] ~~Better error handling~~
+- [x] ~~Some simple caching system~~
+- [x] ~~Options handling~~ (kind of, needs much more thinking)
 - [ ] Configuration
 - [ ] Better handling of players with seconds as position data
-- [ ] Flag usage
 - [ ] There is always more!
 
 ## Known issues
