@@ -50,7 +50,6 @@ func WriteLyrics(lyricsTimer *time.Timer, instrTimer *time.Timer, currentLyrics 
 			lyricsRepeated = 1
 		}
 
-		fmt.Println(currentTimestamp, currentLyricTimestamp, nextLyricTimestamp, firstLyricTimestamp, time.Now())
 		// If the nextLyricTimestamp remained at 6000s, then there are no more lyrics.
 		// If that's the case, we'll need to account that the same song may be put on repeat
 		// So the idea would be to change the value nextLyricTimestamp to the playing song's duration
