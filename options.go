@@ -10,6 +10,7 @@ import (
 var helpText = []string{
 	"Usage:",
 	"  playerctl-lyrics [OPTION]",
+	"  Launching without any options will start the main process that gets lyrics, syncs them with playerctl and prints them to stdout.",
 	"",
 	"Options:",
 	"  -h, --help:													print this message and exit",
