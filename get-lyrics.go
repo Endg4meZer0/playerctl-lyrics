@@ -92,24 +92,27 @@ func GetSyncedLyrics(song *SongData) map[float64]string {
 	syncedLyrics := strings.Split(foundSong.SyncedLyrics, "\n")
 	for _, lyric := range syncedLyrics {
 		lyricParts := strings.SplitN(lyric, " ", 2)
-		timecode := TimecodeStrToFloat(lyricParts[0])
+		timecode, err := TimecodeStrToFloat(lyricParts[0])
+		if err != nil {
+			continue
+		}
 		lyricStr := lyricParts[1]
 		result[timecode] = lyricStr
 	}
 	return result
 }
 
-func TimecodeStrToFloat(timecode string) float64 {
+func TimecodeStrToFloat(timecode string) (float64, error) {
 	// [00:00.00]
 	minutes, err := strconv.ParseFloat(timecode[1:3], 64)
 	if err != nil {
-		panic(err)
+		return -1, err
 	}
 	seconds, err := strconv.ParseFloat(timecode[4:9], 64)
 	if err != nil {
-		panic(err)
+		return -1, err
 	}
-	return minutes*60.0 + seconds
+	return minutes*60.0 + seconds, nil
 }
 
 func SendRequest(link url.URL) ([]LrcLibJsonOutput, bool) {
