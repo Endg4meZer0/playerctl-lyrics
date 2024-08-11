@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-func WriteLyrics(lyricsTimer *time.Timer, instrTimer *time.Timer, currentLyrics *map[float64]string, isPlaying *bool, currentSong *SongData) {
+func WriteLyrics(lyricsTimer *time.Timer, instrTimer *time.Timer, currentLyrics *map[float64]string, isPlaying *bool, currentSong *SongData, prevLyric string, lyricsRepeated uint) {
 	if currentSong.LyricsType == 4 {
 		instrTimer.Stop()
 		fmt.Println()
@@ -44,6 +44,12 @@ func WriteLyrics(lyricsTimer *time.Timer, instrTimer *time.Timer, currentLyrics 
 			}
 		}
 
+		if lyric == prevLyric {
+			lyricsRepeated++
+		} else {
+			lyricsRepeated = 1
+		}
+
 		fmt.Println(currentTimestamp, currentLyricTimestamp, nextLyricTimestamp, firstLyricTimestamp, time.Now())
 		// If the nextLyricTimestamp remained at 6000s, then there are no more lyrics.
 		// If that's the case, we'll need to account that the same song may be put on repeat
@@ -68,7 +74,11 @@ func WriteLyrics(lyricsTimer *time.Timer, instrTimer *time.Timer, currentLyrics 
 				// 3) call the next writing goroutine
 				instrTimer.Stop()
 				if !wasPaused && (!playerUsesIntegerPosition || math.Abs(nextLyricTimestamp-currentTimestamp) >= 1.0) { // if the playback was paused, that usually causes lyric to print itself twice, so here's a little fuse
-					fmt.Println(lyric)
+					fmt.Print(lyric)
+					if lyricsRepeated > 1 {
+						fmt.Printf(" (x%v)", lyricsRepeated)
+					}
+					fmt.Println()
 				}
 			}
 		}
@@ -96,7 +106,7 @@ func WriteLyrics(lyricsTimer *time.Timer, instrTimer *time.Timer, currentLyrics 
 		}
 		go func() {
 			<-lyricsTimer.C
-			go WriteLyrics(lyricsTimer, instrTimer, currentLyrics, isPlaying, currentSong)
+			go WriteLyrics(lyricsTimer, instrTimer, currentLyrics, isPlaying, currentSong, lyric, lyricsRepeated)
 		}()
 	}
 }

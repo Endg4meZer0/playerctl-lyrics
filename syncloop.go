@@ -56,7 +56,7 @@ func SyncLoop() {
 	go func() {
 		for {
 			currentLyrics = <-fullLyrChan
-			go WriteLyrics(lyricsTimer, instrTimer, &currentLyrics, &isPlaying, &currentSong)
+			go WriteLyrics(lyricsTimer, instrTimer, &currentLyrics, &isPlaying, &currentSong, "", 0)
 			/*
 				Timer is made like this:
 				1) get the lyric from the map based on timestamp (we need the next lyric AFTER that timestamp)
