@@ -12,9 +12,36 @@ import (
 	"strings"
 )
 
-// Make a URL to lrclib.net to send a GET request to
-func MakeURL(song *SongData) url.URL {
+// Make a URL to lrclib.net/api/get to send a GET request to
+func MakeURLGet(song *SongData) url.URL {
 	lrclibURL, err := url.Parse("http://lrclib.net/api/get?" + url.PathEscape(fmt.Sprintf("track_name=%v&artist_name=%v&album_name=%v&duration=%v", song.Song, song.Artist, song.Album, int(math.Ceil(song.Duration)))))
+	if err != nil {
+		log.Fatalln(err)
+	}
+	return *lrclibURL
+}
+
+// Make a URL to lrclib.net/api/search with album and duration data to send a GET request to
+func MakeURLSearchWithAlbumAndDuration(song *SongData) url.URL {
+	lrclibURL, err := url.Parse("http://lrclib.net/api/search?" + url.PathEscape(fmt.Sprintf("track_name=%v&artist_name=%v&album_name=%v&duration=%v", song.Song, song.Artist, song.Album, int(math.Ceil(song.Duration)))))
+	if err != nil {
+		log.Fatalln(err)
+	}
+	return *lrclibURL
+}
+
+// Make a URL to lrclib.net/api/search with album data to send a GET request to
+func MakeURLSearchWithAlbum(song *SongData) url.URL {
+	lrclibURL, err := url.Parse("http://lrclib.net/api/search?" + url.PathEscape(fmt.Sprintf("track_name=%v&artist_name=%v&album_name=%v", song.Song, song.Artist, song.Album)))
+	if err != nil {
+		log.Fatalln(err)
+	}
+	return *lrclibURL
+}
+
+// Make a URL to lrclib.net/api/search only with necessary data (song name and artist name) to send a GET request to
+func MakeURLSearch(song *SongData) url.URL {
+	lrclibURL, err := url.Parse("http://lrclib.net/api/search?" + url.PathEscape(fmt.Sprintf("track_name=%v&artist_name=%v", song.Song, song.Artist)))
 	if err != nil {
 		log.Fatalln(err)
 	}
@@ -24,26 +51,29 @@ func MakeURL(song *SongData) url.URL {
 // Return either a slice of strings that correspond to song's lyrics and a 'false' or nil and 'true'.
 // If []string is nil AND bool is false, then it's an error.
 func GetSyncedLyrics(song *SongData) map[float64]string {
-	lrclibURL := MakeURL(song)
+	lrclibURL := MakeURLGet(song)
 
-	resp, err := http.Get(lrclibURL.String())
-	if err != nil {
-		fmt.Println("Could not make a GET request to LrcLib!")
-		return nil
+	foundSongs, found := SendRequest(lrclibURL)
+
+	if !found {
+		lrclibURL = MakeURLSearchWithAlbumAndDuration(song)
+		foundSongs, found = SendRequest(lrclibURL)
+		if !found {
+			lrclibURL = MakeURLSearchWithAlbum(song)
+			foundSongs, found = SendRequest(lrclibURL)
+			if !found {
+				lrclibURL = MakeURLSearch(song)
+				foundSongs, found = SendRequest(lrclibURL)
+			}
+		}
 	}
 
-	if resp.StatusCode != 200 {
+	if !found {
 		song.LyricsType = 3
 		return nil
 	}
 
-	body, err := io.ReadAll(resp.Body)
-	resp.Body.Close()
-	if err != nil {
-		log.Fatalln(err)
-	}
-	var foundSong LrcLibJsonOutput
-	json.Unmarshal(body, &foundSong)
+	foundSong := foundSongs[0]
 
 	if foundSong.Instrumental {
 		song.LyricsType = 2
@@ -80,4 +110,22 @@ func TimecodeStrToFloat(timecode string) float64 {
 		panic(err)
 	}
 	return minutes*60.0 + seconds
+}
+
+func SendRequest(link url.URL) ([]LrcLibJsonOutput, bool) {
+	resp, err := http.Get(link.String())
+	if err != nil || resp.StatusCode != 200 {
+		return nil, false
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	resp.Body.Close()
+	if err != nil {
+		return nil, false
+	}
+
+	var foundSongs []LrcLibJsonOutput
+	json.Unmarshal(body, &foundSongs)
+
+	return foundSongs, len(foundSongs) != 0
 }
