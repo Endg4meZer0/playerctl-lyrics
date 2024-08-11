@@ -16,9 +16,12 @@ func main() {
 
 	// Check if `playerctl` is installed
 	err := exec.Command("playerctl", "--version").Run()
-
 	if err != nil {
 		log.Fatalln("playerctl is not found!")
+	}
+
+	if len(os.Args) > 1 {
+		HandleOptions(os.Args[1:])
 	}
 
 	sigs := make(chan os.Signal, 1)
