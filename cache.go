@@ -38,14 +38,14 @@ func StoreCachedLyrics(song *SongData, lrcData LrcLibJson) error {
 		return err
 	}
 
-	os.Mkdir(cacheDirectory+"/playerctl-lyrics", 0777)
+	os.Mkdir(cacheDirectory+"/playerctl-lyrics", 0660)
 
 	filename := RemoveBadCharacters(fmt.Sprintf("%v.%v.%v.%v", song.Artist, song.Song, song.Album, math.Round(song.Duration)))
 	data, err := json.Marshal(lrcData)
 	if err != nil {
 		return err
 	}
-	if err = os.WriteFile(cacheDirectory+"/playerctl-lyrics/"+filename+".json", data, 0777); err != nil {
+	if err = os.WriteFile(cacheDirectory+"/playerctl-lyrics/"+filename+".json", data, 0660); err != nil {
 		return err
 	}
 	return nil
