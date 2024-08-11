@@ -7,16 +7,13 @@ import (
 func SyncLoop() {
 	var currentSong SongData
 	var currentLyrics map[float64]string
-	var currentlyInstrumental bool
-	var currentSongIsNotFound bool
-	var noPlayersFound bool
 	var isPlaying bool
 
 	lyricsTimer := time.NewTimer(time.Second)
 	lyricsTimer.Stop()
-	instrTicker := time.NewTicker(500 * time.Millisecond)
-	instrTicker.Stop()                                                      // stopping because the ticker should be reset when it's needed, and Go doesn't close ticker's channel after stop
-	go WriteInstrumental(instrTicker.C, &isPlaying, &currentSongIsNotFound) // also starting the instrumental thread at the same time to not create additional instances and only work with the ticker
+	instrTimer := time.NewTimer(500 * time.Millisecond)        // using timer instead of ticker allows to use different durations when necessary without much thoughts
+	instrTimer.Stop()                                          // stopping because the timer should be reset when it's needed
+	go WriteInstrumental(instrTimer, &isPlaying, &currentSong) // also starting the instrumental thread at the same time to not create additional instances and only work with the ticker
 
 	checkerTicker := time.NewTicker(time.Second)
 
@@ -27,21 +24,20 @@ func SyncLoop() {
 	go func() {
 		for {
 			<-songChanged
-			if currentSong.Song == "" && currentSong.Artist == "" && currentSong.Album == "" {
+
+			lyricsTimer.Stop()
+			instrTimer.Stop()
+
+			// If the duration equals 0s, then there are no supported players out there.
+			if currentSong.Duration == 0 {
+				currentSong.LyricsType = 4
 				fullLyrChan <- nil
-				noPlayersFound = true
 				continue
-			} else {
-				noPlayersFound = false
 			}
 
-			lyr, instr := GetSyncedLyrics(&currentSong)
-			if lyr == nil {
-				currentSongIsNotFound = !instr
-				currentlyInstrumental = true
-			} else {
-				currentSongIsNotFound = false
-				currentlyInstrumental = false
+			lyr := GetSyncedLyrics(&currentSong)
+			if currentSong.LyricsType == 5 {
+				currentSong.LyricsType = 6
 			}
 			fullLyrChan <- lyr
 		}
@@ -52,7 +48,7 @@ func SyncLoop() {
 		for {
 			<-checkerTicker.C
 			song := GetCurrentSongData()
-			if song != currentSong {
+			if song.Song != currentSong.Song || song.Artist != currentSong.Artist || song.Album != currentSong.Album || song.Duration != currentSong.Duration {
 				currentSong = song
 				songChanged <- true
 				//currentLyrics, currentlyInstrumental := GetSyncedLyrics(song)
@@ -63,9 +59,7 @@ func SyncLoop() {
 	go func() {
 		for {
 			currentLyrics = <-fullLyrChan
-			lyricsTimer.Stop()
-			instrTicker.Stop()
-			go WriteLyrics(lyricsTimer, instrTicker, &currentLyrics, &isPlaying, &currentlyInstrumental, &noPlayersFound)
+			go WriteLyrics(lyricsTimer, instrTimer, &currentLyrics, &isPlaying, &currentSong, "", 0)
 			/*
 				Timer is made like this:
 				1) get the lyric from the map based on timestamp (we need the next lyric AFTER that timestamp)
