@@ -12,7 +12,7 @@ func GetCurrentSongData() SongData {
 	output, _ := cmd.CombinedOutput()
 
 	soutput := string(output)
-	if !strings.Contains(soutput, "xesam:title ") {
+	if !strings.Contains(soutput, "xesam:title") || !strings.Contains(soutput, "mpris:length") {
 		return SongData{Song: "", Artist: "", Album: ""}
 	}
 	_, songTitleExtra, _ := strings.Cut(soutput, "xesam:title")
@@ -24,8 +24,18 @@ func GetCurrentSongData() SongData {
 	if albumFound {
 		album = strings.TrimLeft(strings.Split(albumNameExtra, "\n")[0], " ")
 	}
+	_, durationExtra, durationFound := strings.Cut(soutput, "mpris:length")
+	var duration float64
+	if durationFound {
+		duration2, err := strconv.ParseFloat(strings.TrimLeft(strings.Split(durationExtra, "\n")[0], " "), 64)
+		if err != nil {
+			duration2 = 0.0
+		} else {
+			duration = duration2 / 1000000
+		}
+	}
 
-	return SongData{Song: song, Artist: artist, Album: album}
+	return SongData{Song: song, Artist: artist, Album: album, Duration: duration, LyricsType: 5}
 }
 
 func GetCurrentSongStatus() bool {
