@@ -9,7 +9,7 @@ import (
 	"regexp"
 )
 
-var badCharactersRegexp = regexp.MustCompile(`[:;|\/\\<>]+`)
+var badCharactersRegexp = regexp.MustCompile(`[:;|\/\\<>\.]+`)
 
 func GetCachedLyrics(song *SongData) LrcLibJson {
 	cacheDirectory, err := os.UserCacheDir()
@@ -18,7 +18,7 @@ func GetCachedLyrics(song *SongData) LrcLibJson {
 		return LrcLibJson{}
 	}
 
-	filename := RemoveBadCharacters(fmt.Sprintf("%v.%v.%v.%v", song.Artist, song.Song, song.Album, math.Round(song.Duration)))
+	filename := GetFilename(song.Song, song.Artist, song.Album, song.Duration)
 	if file, err := os.ReadFile(cacheDirectory + "/playerctl-lyrics/" + filename + ".json"); err == nil {
 		var result LrcLibJson
 		err = json.Unmarshal(file, &result)
@@ -38,9 +38,9 @@ func StoreCachedLyrics(song *SongData, lrcData LrcLibJson) error {
 		return err
 	}
 
-	os.Mkdir(cacheDirectory+"/playerctl-lyrics", 0660)
+	os.Mkdir(cacheDirectory+"/playerctl-lyrics", 0777)
 
-	filename := RemoveBadCharacters(fmt.Sprintf("%v.%v.%v.%v", song.Artist, song.Song, song.Album, math.Round(song.Duration)))
+	filename := GetFilename(song.Song, song.Artist, song.Album, song.Duration)
 	data, err := json.Marshal(lrcData)
 	if err != nil {
 		return err
@@ -51,6 +51,10 @@ func StoreCachedLyrics(song *SongData, lrcData LrcLibJson) error {
 	return nil
 }
 
-func RemoveBadCharacters(fileName string) string {
-	return badCharactersRegexp.ReplaceAllString(fileName, "_")
+func GetFilename(song string, artist string, album string, duration float64) string {
+	return fmt.Sprintf("%v.%v.%v.%v", RemoveBadCharacters(song), RemoveBadCharacters(artist), RemoveBadCharacters(album), math.Round(duration))
+}
+
+func RemoveBadCharacters(str string) string {
+	return badCharactersRegexp.ReplaceAllString(str, "_")
 }

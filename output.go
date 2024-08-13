@@ -126,6 +126,8 @@ func WriteInstrumental(instrTimer *time.Timer, isPlaying *bool, currentSong *Son
 				fmt.Println("Current song was not found on LrcLib! " + strings.Repeat(note, i%4))
 			} else if currentSong.LyricsType == 6 {
 				fmt.Println("Failed to get lyrics! " + strings.Repeat(note, i%4))
+			} else if currentSong.LyricsType == 1 {
+				fmt.Println("This song's lyrics are not synced on LrcLib! " + strings.Repeat(note, i%4))
 			} else {
 				fmt.Println(strings.Repeat(note, i%4))
 			}
