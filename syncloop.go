@@ -6,7 +6,6 @@ import (
 
 func SyncLoop() {
 	var currentSong SongData
-	var currentLyrics map[float64]string
 	var isPlaying bool
 
 	lyricsTimer := time.NewTimer(time.Second)
@@ -51,14 +50,20 @@ func SyncLoop() {
 			if song.Song != currentSong.Song || song.Artist != currentSong.Artist || song.Album != currentSong.Album || song.Duration != currentSong.Duration {
 				currentSong = song
 				songChanged <- true
-				//currentLyrics, currentlyInstrumental := GetSyncedLyrics(song)
 			}
 		}
 	}()
 
 	go func() {
 		for {
-			currentLyrics = <-fullLyrChan
+			currentLyrics := <-fullLyrChan
+
+			for i, lyric := range currentLyrics {
+				if IsSupportedAsianLang(lyric) {
+					currentLyrics[i] = Romanize(lyric)
+				}
+			}
+
 			go WriteLyrics(lyricsTimer, instrTimer, &currentLyrics, &isPlaying, &currentSong, "", 0)
 			/*
 				Timer is made like this:
