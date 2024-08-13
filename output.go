@@ -7,15 +7,30 @@ import (
 	"time"
 )
 
-func WriteLyrics(lyricsTimer *time.Timer, instrTimer *time.Timer, currentLyrics *map[float64]string, isPlaying *bool, currentSong *SongData, prevLyric string, lyricsRepeated uint) {
+var lyricsTimer = time.NewTimer(time.Second)
+var instrTimer = time.NewTimer(500 * time.Millisecond)
+var currentLyrics map[float64]string
+var currentSong SongData
+var prevLyric = ""
+var lyricsRepeated uint = 0
+var isPlaying = false
+
+func UpdateData(newLyrics map[float64]string, newSong SongData) {
+	currentLyrics = newLyrics
+	currentSong = newSong
+	lyricsTimer.Reset(100)
+	instrTimer.Stop()
+}
+
+func WriteLyrics() {
 	if currentSong.LyricsType == 4 {
 		instrTimer.Stop()
 		fmt.Println()
 	} else if currentSong.LyricsType >= 2 {
 		instrTimer.Reset(1)
 	} else {
-		wasPaused := !*isPlaying
-		*isPlaying = GetCurrentSongStatus()
+		wasPaused := !isPlaying
+		isPlaying = GetCurrentSongStatus()
 		currentTimestamp := GetCurrentSongPosition()
 
 		// if a floating part is less than that value down there (tested on cmus, may differ between players)
@@ -31,7 +46,7 @@ func WriteLyrics(lyricsTimer *time.Timer, instrTimer *time.Timer, currentLyrics 
 		nextLyricTimestamp := 6000.0
 		lyric := ""
 
-		for lyricTimestamp, l := range *currentLyrics {
+		for lyricTimestamp, l := range currentLyrics {
 			if firstLyricTimestamp > lyricTimestamp {
 				firstLyricTimestamp = lyricTimestamp
 			}
@@ -50,18 +65,20 @@ func WriteLyrics(lyricsTimer *time.Timer, instrTimer *time.Timer, currentLyrics 
 			lyricsRepeated = 1
 		}
 
+		prevLyric = lyric
+
 		// If the nextLyricTimestamp remained at 6000s, then there are no more lyrics.
 		// If that's the case, we'll need to account that the same song may be put on repeat
 		// So the idea would be to change the value nextLyricTimestamp to the playing song's duration
-		// and maybe add a bit like 0.25s to be 100% sure
+		// and maybe add a bit like 0.1s to be 100% sure we're on a new song iteration
 		if nextLyricTimestamp == 6000.0 {
-			nextLyricTimestamp = math.Abs(currentSong.Duration) + 0.25
+			nextLyricTimestamp = math.Abs(currentSong.Duration) + 0.1
 		}
 		// If the currentTimestamp is less than even the first timestamp of the lyrics
 		// then reset an instrumental ticker until the first lyric shows up
 		if currentTimestamp < firstLyricTimestamp {
 			instrTimer.Reset(1)
-		} else if *isPlaying { // If paused then don't print the lyric and instead try once more time later
+		} else if isPlaying { // If paused then don't print the lyric and instead try once more time later
 			if lyric == "" {
 				// An empty lyric basically means instrumental part,
 				// so we reset the instrumental ticker and moving on
@@ -105,21 +122,22 @@ func WriteLyrics(lyricsTimer *time.Timer, instrTimer *time.Timer, currentLyrics 
 		}
 		go func() {
 			<-lyricsTimer.C
-			go WriteLyrics(lyricsTimer, instrTimer, currentLyrics, isPlaying, currentSong, lyric, lyricsRepeated)
+			go WriteLyrics()
 		}()
 	}
 }
 
 // instrTimer.Stop to stop writing instrumental
 // instrTimer.Reset to continue again
-func WriteInstrumental(instrTimer *time.Timer, isPlaying *bool, currentSong *SongData) {
+func WriteInstrumental() {
 	note := "♪"
 	i := 1
 	for {
 		<-instrTimer.C
-		*isPlaying = GetCurrentSongStatus()
+		isPlaying = GetCurrentSongStatus()
 		// Not playing? Don't change anything, or it will look kinda strange
-		if !*isPlaying {
+		if !isPlaying {
+			instrTimer.Reset(500 * time.Millisecond)
 			continue
 		} else {
 			if currentSong.LyricsType == 3 {
