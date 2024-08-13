@@ -42,8 +42,7 @@ func SyncLoop() {
 			song := GetCurrentSongData()
 			if song.Song != currentSong.Song || song.Artist != currentSong.Artist || song.Album != currentSong.Album || song.Duration != currentSong.Duration {
 				currentSong = song
-				lyricsTimer.Stop()
-				instrTimer.Stop()
+				UpdateData(currentLyrics, currentSong)
 
 				songChanged <- true
 				//currentLyrics, currentlyInstrumental := GetSyncedLyrics(song)
