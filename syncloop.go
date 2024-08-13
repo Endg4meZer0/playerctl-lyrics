@@ -6,31 +6,22 @@ import (
 
 func SyncLoop() {
 	var currentSong SongData
-	var isPlaying bool
-
-	lyricsTimer := time.NewTimer(time.Second)
-	lyricsTimer.Stop()
-	instrTimer := time.NewTimer(500 * time.Millisecond)        // using timer instead of ticker allows to use different durations when necessary without much thoughts
-	instrTimer.Stop()                                          // stopping because the timer should be reset when it's needed
-	go WriteInstrumental(instrTimer, &isPlaying, &currentSong) // also starting the instrumental thread at the same time to not create additional instances and only work with the ticker
+	var currentLyrics map[float64]string
 
 	checkerTicker := time.NewTicker(time.Second)
 
 	songChanged := make(chan bool, 1)
-	fullLyrChan := make(chan map[float64]string, 1)
+	fullLyrChan := make(chan bool, 1)
 
 	// Goroutine to wait for incoming song metadata (lyrics and instrumental bool)
 	go func() {
 		for {
 			<-songChanged
 
-			lyricsTimer.Stop()
-			instrTimer.Stop()
-
 			// If the duration equals 0s, then there are no supported players out there.
 			if currentSong.Duration == 0 {
 				currentSong.LyricsType = 4
-				fullLyrChan <- nil
+				fullLyrChan <- false
 				continue
 			}
 
@@ -38,7 +29,9 @@ func SyncLoop() {
 			if currentSong.LyricsType == 5 {
 				currentSong.LyricsType = 6
 			}
-			fullLyrChan <- lyr
+
+			currentLyrics = lyr
+			fullLyrChan <- true
 		}
 	}()
 
@@ -49,6 +42,8 @@ func SyncLoop() {
 			song := GetCurrentSongData()
 			if song.Song != currentSong.Song || song.Artist != currentSong.Artist || song.Album != currentSong.Album || song.Duration != currentSong.Duration {
 				currentSong = song
+				UpdateData(currentLyrics, currentSong)
+
 				songChanged <- true
 			}
 		}
@@ -56,7 +51,9 @@ func SyncLoop() {
 
 	go func() {
 		for {
-			currentLyrics := <-fullLyrChan
+			if !<-fullLyrChan {
+				currentLyrics = nil
+			}
 
 			for i, lyric := range currentLyrics {
 				if IsSupportedAsianLang(lyric) {
@@ -64,7 +61,7 @@ func SyncLoop() {
 				}
 			}
 
-			go WriteLyrics(lyricsTimer, instrTimer, &currentLyrics, &isPlaying, &currentSong, "", 0)
+			UpdateData(currentLyrics, currentSong)
 			/*
 				Timer is made like this:
 				1) get the lyric from the map based on timestamp (we need the next lyric AFTER that timestamp)
@@ -74,4 +71,7 @@ func SyncLoop() {
 			*/
 		}
 	}()
+
+	go WriteLyrics()
+	go WriteInstrumental()
 }
