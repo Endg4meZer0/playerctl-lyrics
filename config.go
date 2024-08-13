@@ -29,9 +29,11 @@ type Cache struct {
 }
 
 type Output struct {
-	ShowSongNotFoundWarning    bool         `json:"showSongNotFoundWarning"`
-	ShowNotSyncedLyricsWarning bool         `json:"showNotSyncedLyricsWarning"`
-	Romanization               Romanization `json:"romanization"`
+	ShowSongNotFoundWarning         bool         `json:"showSongNotFoundWarning"`
+	ShowNotSyncedLyricsWarning      bool         `json:"showNotSyncedLyricsWarning"`
+	ShowGettingLyricsMessage        bool         `json:"showGettingLyricsMessage"`
+	ShowRepeatedLyricsMultiplicator bool         `json:"showRepeatedLyricsMultiplicator"`
+	Romanization                    Romanization `json:"romanization"`
 }
 
 type Instrumental struct {
@@ -48,11 +50,7 @@ type Romanization struct {
 	Korean   bool `json:"korean"`
 }
 
-var currentConfig Config
-
-func GetConfig() Config {
-	return currentConfig
-}
+var CurrentConfig Config
 
 func ReadConfig(path string) error {
 	jsonConfig, err := os.ReadFile(path)
@@ -60,24 +58,43 @@ func ReadConfig(path string) error {
 		return err
 	}
 
-	if err := json.Unmarshal(jsonConfig, &currentConfig); err != nil {
+	if err := json.Unmarshal(jsonConfig, &CurrentConfig); err != nil {
 		return err
 		// "The config at %v does not exist or is not readable! Falling back to the default config!"
 		// "The config at %v is not formatted as JSON! Falling back to the default config!"
 		// "The config at %v is not valid! Error at %v. Falling back to the default config!"
 	}
 
-	if err := currentConfig.validateConfig(); err != nil {
-		return err
-	}
-
 	return nil
 }
 
-func (config *Config) validateConfig() error {
-	panic("not implemented!!1")
-}
-
-func defaultConfig() Config {
-	panic("not implemented!!1")
+func DefaultConfig() Config {
+	return Config{
+		Playerctl: Playerctl{
+			IncludedPlayers:            []string{},
+			ExcludedPlayers:            []string{},
+			PlayerctlSongCheckInterval: 1.0,
+		},
+		Cache: Cache{
+			DoCacheLyrics: true,
+			CacheDir:      "$XDG_CACHE_DIR/playerctl-lyrics",
+			CacheLifeSpan: 0,
+		},
+		Output: Output{
+			ShowSongNotFoundWarning:         true,
+			ShowNotSyncedLyricsWarning:      true,
+			ShowGettingLyricsMessage:        true,
+			ShowRepeatedLyricsMultiplicator: true,
+			Romanization: Romanization{
+				Japanese: false,
+				Chinese:  false,
+				Korean:   false,
+			},
+		},
+		Instrumental: Instrumental{
+			Interval: 0.5,
+			Symbol:   "♪",
+			MaxCount: 3,
+		},
+	}
 }
