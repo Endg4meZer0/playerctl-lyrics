@@ -121,8 +121,13 @@ func SendRequest(link url.URL) ([]LrcLibJson, bool) {
 		return nil, false
 	}
 
-	var foundSongs []LrcLibJson
-	json.Unmarshal(body, &foundSongs)
+	var foundSong LrcLibJson
+	if json.Unmarshal(body, &foundSong) != nil {
+		var foundSongs []LrcLibJson
+		json.Unmarshal(body, &foundSongs)
 
-	return foundSongs, len(foundSongs) != 0
+		return foundSongs, len(foundSongs) != 0
+	} else {
+		return []LrcLibJson{foundSong}, true
+	}
 }
