@@ -7,7 +7,16 @@ import (
 )
 
 func GetCurrentSongData() SongData {
-	cmd := exec.Command("playerctl", "metadata")
+	var cmd *exec.Cmd
+	if len(CurrentConfig.Playerctl.IncludedPlayers) != 0 {
+		includedPlayers := strings.Join(CurrentConfig.Playerctl.IncludedPlayers, ",")
+		cmd = exec.Command("playerctl", "metadata", "-p", includedPlayers)
+	} else if len(CurrentConfig.Playerctl.ExcludedPlayers) != 0 {
+		excludedPlayers := strings.Join(CurrentConfig.Playerctl.ExcludedPlayers, ",")
+		cmd = exec.Command("playerctl", "metadata", "-i", excludedPlayers)
+	} else {
+		cmd = exec.Command("playerctl", "metadata")
+	}
 
 	output, _ := cmd.CombinedOutput()
 
@@ -39,12 +48,32 @@ func GetCurrentSongData() SongData {
 }
 
 func GetCurrentSongStatus() bool {
-	output, _ := exec.Command("playerctl", "status").CombinedOutput()
+	var cmd *exec.Cmd
+	if len(CurrentConfig.Playerctl.IncludedPlayers) != 0 {
+		includedPlayers := strings.Join(CurrentConfig.Playerctl.IncludedPlayers, ",")
+		cmd = exec.Command("playerctl", "status", "-p", includedPlayers)
+	} else if len(CurrentConfig.Playerctl.ExcludedPlayers) != 0 {
+		excludedPlayers := strings.Join(CurrentConfig.Playerctl.ExcludedPlayers, ",")
+		cmd = exec.Command("playerctl", "status", "-i", excludedPlayers)
+	} else {
+		cmd = exec.Command("playerctl", "status")
+	}
+	output, _ := cmd.CombinedOutput()
 	return string(output) == "Playing\n"
 }
 
 func GetCurrentSongPosition() float64 {
-	output, _ := exec.Command("playerctl", "position").CombinedOutput()
+	var cmd *exec.Cmd
+	if len(CurrentConfig.Playerctl.IncludedPlayers) != 0 {
+		includedPlayers := strings.Join(CurrentConfig.Playerctl.IncludedPlayers, ",")
+		cmd = exec.Command("playerctl", "position", "-p", includedPlayers)
+	} else if len(CurrentConfig.Playerctl.ExcludedPlayers) != 0 {
+		excludedPlayers := strings.Join(CurrentConfig.Playerctl.ExcludedPlayers, ",")
+		cmd = exec.Command("playerctl", "position", "-i", excludedPlayers)
+	} else {
+		cmd = exec.Command("playerctl", "position")
+	}
+	output, _ := cmd.CombinedOutput()
 	soutput, _ := strings.CutSuffix(string(output), "\n")
 	currentTimestamp, err := strconv.ParseFloat(soutput, 64)
 	if err != nil {

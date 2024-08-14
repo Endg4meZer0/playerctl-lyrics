@@ -21,15 +21,6 @@ func MakeURLGet(song *SongData) url.URL {
 	return *lrclibURL
 }
 
-// Make a URL to lrclib.net/api/search with album and duration data to send a GET request to
-func MakeURLSearchWithAlbumAndDuration(song *SongData) url.URL {
-	lrclibURL, err := url.Parse("http://lrclib.net/api/search?" + url.PathEscape(fmt.Sprintf("track_name=%v&artist_name=%v&album_name=%v&duration=%v", song.Song, song.Artist, song.Album, int(math.Ceil(song.Duration)))))
-	if err != nil {
-		log.Fatalln(err)
-	}
-	return *lrclibURL
-}
-
 // Make a URL to lrclib.net/api/search with album data to send a GET request to
 func MakeURLSearchWithAlbum(song *SongData) url.URL {
 	lrclibURL, err := url.Parse("http://lrclib.net/api/search?" + url.PathEscape(fmt.Sprintf("track_name=%v&artist_name=%v&album_name=%v", song.Song, song.Artist, song.Album)))
@@ -51,22 +42,18 @@ func MakeURLSearch(song *SongData) url.URL {
 // Return either a slice of strings that correspond to song's lyrics and a 'false' or nil and 'true'.
 // If []string is nil AND bool is false, then it's an error.
 func GetSyncedLyrics(song *SongData) map[float64]string {
-	foundSong := GetCachedLyrics(song)
-	if !foundSong.Instrumental && foundSong.PlainLyrics == "" && foundSong.SyncedLyrics == "" {
+	foundSong, isNotExpired := GetCachedLyrics(song)
+	if (!foundSong.Instrumental && foundSong.PlainLyrics == "" && foundSong.SyncedLyrics == "") || !isNotExpired {
 		lrclibURL := MakeURLGet(song)
 
 		foundSongs, found := SendRequest(lrclibURL)
 
 		if !found {
-			lrclibURL = MakeURLSearchWithAlbumAndDuration(song)
+			lrclibURL = MakeURLSearchWithAlbum(song)
 			foundSongs, found = SendRequest(lrclibURL)
 			if !found {
-				lrclibURL = MakeURLSearchWithAlbum(song)
+				lrclibURL = MakeURLSearch(song)
 				foundSongs, found = SendRequest(lrclibURL)
-				if !found {
-					lrclibURL = MakeURLSearch(song)
-					foundSongs, found = SendRequest(lrclibURL)
-				}
 			}
 		}
 
@@ -77,8 +64,10 @@ func GetSyncedLyrics(song *SongData) map[float64]string {
 
 		foundSong = foundSongs[0]
 
-		if err := StoreCachedLyrics(song, foundSong); err != nil {
-			log.Println("Could not save the lyrics to the cache! Are there writing perms?")
+		if CurrentConfig.Cache.DoCacheLyrics {
+			if err := StoreCachedLyrics(song, foundSong); err != nil {
+				log.Println("Could not save the lyrics to the cache! Are there writing perms?")
+			}
 		}
 	}
 
@@ -134,8 +123,13 @@ func SendRequest(link url.URL) ([]LrcLibJson, bool) {
 		return nil, false
 	}
 
-	var foundSongs []LrcLibJson
-	json.Unmarshal(body, &foundSongs)
+	var foundSong LrcLibJson
+	if json.Unmarshal(body, &foundSong) != nil {
+		var foundSongs []LrcLibJson
+		json.Unmarshal(body, &foundSongs)
 
-	return foundSongs, len(foundSongs) != 0
+		return foundSongs, len(foundSongs) != 0
+	} else {
+		return []LrcLibJson{foundSong}, true
+	}
 }
