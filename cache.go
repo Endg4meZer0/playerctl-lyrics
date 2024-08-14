@@ -20,7 +20,7 @@ func GetCachedLyrics(song *SongData) (LrcLibJson, bool) {
 
 	cacheDirectory = os.ExpandEnv(cacheDirectory)
 
-	filename := GetFilename(song.Song, song.Artist, song.Album, song.Duration)
+	filename := getFilename(song.Song, song.Artist, song.Album, song.Duration)
 	if file, err := os.ReadFile(cacheDirectory + "/" + filename + ".json"); err == nil {
 		var result LrcLibJson
 		err = json.Unmarshal(file, &result)
@@ -56,7 +56,7 @@ func StoreCachedLyrics(song *SongData, lrcData LrcLibJson) error {
 		lrcData.PlainLyrics = "yes"
 	}
 
-	filename := GetFilename(song.Song, song.Artist, song.Album, song.Duration)
+	filename := getFilename(song.Song, song.Artist, song.Album, song.Duration)
 	data, err := json.Marshal(lrcData)
 	if err != nil {
 		return err
@@ -67,7 +67,7 @@ func StoreCachedLyrics(song *SongData, lrcData LrcLibJson) error {
 	return nil
 }
 
-func GetFilename(song string, artist string, album string, duration float64) string {
+func getFilename(song string, artist string, album string, duration float64) string {
 	return fmt.Sprintf("%v.%v.%v.%v", RemoveBadCharacters(song), RemoveBadCharacters(artist), RemoveBadCharacters(album), math.Round(duration))
 }
 
