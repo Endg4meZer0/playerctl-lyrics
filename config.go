@@ -53,16 +53,40 @@ type Romanization struct {
 var CurrentConfig Config
 
 func ReadConfig(path string) error {
-	jsonConfig, err := os.ReadFile(path)
+	configFile, err := os.ReadFile(path)
 	if err != nil {
 		return err
 	}
 
-	if err := json.Unmarshal(jsonConfig, &CurrentConfig); err != nil {
+	if err := json.Unmarshal(configFile, &CurrentConfig); err != nil {
 		return err
-		// "The config at %v does not exist or is not readable! Falling back to the default config!"
-		// "The config at %v is not formatted as JSON! Falling back to the default config!"
-		// "The config at %v is not valid! Error at %v. Falling back to the default config!"
+	}
+
+	return nil
+}
+
+func ReadConfigFromDefaultPath() error {
+	defaultDirectory, err := os.UserConfigDir()
+	if err != nil {
+		return err
+	}
+
+	if _, err := os.ReadDir(defaultDirectory + "/playerctl-lyrics"); err != nil {
+		os.Mkdir(defaultDirectory+"/playerctl-lyrics", 0664)
+		defaultConfig, err := json.Marshal(DefaultConfig())
+		if err != nil {
+			return err
+		}
+		os.WriteFile(defaultDirectory+"/playerctl-lyrics/config.json", defaultConfig, 0664)
+		CurrentConfig = DefaultConfig()
+	} else {
+		configFile, err := os.ReadFile(defaultDirectory + "/playerctl-lyrics/config.json")
+		if err != nil {
+			return err
+		}
+		if json.Unmarshal(configFile, &CurrentConfig) != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -97,4 +121,8 @@ func DefaultConfig() Config {
 			MaxCount: 3,
 		},
 	}
+}
+
+func (r *Romanization) IsEnabled() bool {
+	return r.Japanese || r.Chinese || r.Korean
 }

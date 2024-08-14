@@ -55,9 +55,11 @@ func SyncLoop() {
 				currentLyrics = nil
 			}
 
-			for i, lyric := range currentLyrics {
-				if IsSupportedAsianLang(lyric) {
-					currentLyrics[i] = Romanize(lyric)
+			if CurrentConfig.Output.Romanization.IsEnabled() {
+				for i, lyric := range currentLyrics {
+					if IsSupportedAsianLang(lyric) {
+						currentLyrics[i] = Romanize(lyric)
+					}
 				}
 			}
 
