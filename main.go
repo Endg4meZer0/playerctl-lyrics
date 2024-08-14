@@ -128,7 +128,7 @@ func HandleFlags() {
 				}
 			}
 			if *durationFilter != 0 {
-				if found, _ := regexp.MatchString(string(*durationFilter), sections[3]); !found {
+				if found, _ := regexp.MatchString(fmt.Sprint(*durationFilter), sections[3]); !found {
 					continue
 				}
 			}
