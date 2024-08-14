@@ -3,7 +3,7 @@ Uses `playerctl metadata` output to get song data and makes a GET request to htt
 
 This small thingie is primarily designed for bars like [waybar](https://github.com/Alexays/Waybar).
 
-https://github.com/user-attachments/assets/b3107a9a-eabf-4d76-a6da-ac82fc91156
+https://github.com/user-attachments/assets/209ddfdd-0c2a-4ce6-a213-b9796a154c28
 
 ## Important!
 Players that use seconds as position data like `cmus` will cause a lot of lyrics to mismatch with their accurate timings, potentionally skipping some at all. It *will* work, but nonetheless it is advised to use other players that have more precise format for position data. For example, Spotify works good, since it uses milliseconds in position data.
@@ -21,7 +21,7 @@ Should do the trick.
 ```
 playerctl-lyrics [OPTION]
 ```
-Get more info on on available options with `playerctl-lyrics -help` or on wiki.
+Get more info on on available options with `playerctl-lyrics -help` or on [wiki](https://github.com/Endg4meZer0/playerctl-lyrics/wiki/Available-options).
 
 ## TODO
 - [x] ~~Better error handling~~
