@@ -8,7 +8,7 @@ func SyncLoop() {
 	var currentSong SongData
 	var currentLyrics map[float64]string
 
-	checkerTicker := time.NewTicker(time.Second)
+	checkerTicker := time.NewTicker(time.Duration(CurrentConfig.Playerctl.PlayerctlSongCheckInterval*1000) * time.Millisecond)
 
 	songChanged := make(chan bool, 1)
 	fullLyrChan := make(chan bool, 1)

@@ -23,18 +23,21 @@ func IsSupportedAsianLang(str string) bool {
 }
 
 func Romanize(str string) string {
-	if jpRomanized := jp.ToRomaji(str, true); jpRomanized != strings.ToLower(str) {
+	jpRomanized := jp.ToRomaji(str, true)
+	if CurrentConfig.Output.Romanization.Japanese && jpRomanized != strings.ToLower(str) {
 		return jpRomanized
-	} else if zhRomanized := zhCharToPinyin(str); zhRomanized != str {
-		return zhRomanized
-	} else {
-		r := kr.NewRomanizer(str)
-		if krRomanized := r.Romanize(); krRomanized != str {
-			return krRomanized
-		} else {
-			return str
-		}
 	}
+	zhRomanized := zhCharToPinyin(str)
+	if CurrentConfig.Output.Romanization.Chinese && zhRomanized != str {
+		return zhRomanized
+	}
+	r := kr.NewRomanizer(str)
+	krRomanized := r.Romanize()
+	if CurrentConfig.Output.Romanization.Korean && krRomanized != str {
+		return krRomanized
+	}
+
+	return str
 }
 
 func isChar(s string, rangeTable []*unicode.RangeTable) bool {

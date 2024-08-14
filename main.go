@@ -47,7 +47,7 @@ var helpText = []string{
 func HandleFlags() {
 	configPath := flag.String("config", "", "Sets the config file to use")
 	clearCacheMode := flag.Bool("clear-cache", false, "If true, searches the cache directory, removes cache files that fit the filters (-song-name, -song-artist, etc.) and exits. Only songs that contain the set patterns will be affected")
-	cacheDirectory := flag.String("cache-dir", DefaultConfig().Cache.CacheDir, "Sets the cache directory")
+	cacheDirectory := flag.String("cache-dir", "", "Sets the cache directory")
 	songNameFilter := flag.String("song-name-filter", "", "Sets the song name filter to use when -clear-cache is also set")
 	artistNameFilter := flag.String("artist-name-filter", "", "Sets the artist name filter to use when -clear-cache is also set")
 	albumNameFilter := flag.String("album-name-filter", "", "Sets the album name filter to use when -clear-cache is also set")
@@ -83,9 +83,10 @@ func HandleFlags() {
 		}
 	}
 
-	if *cacheDirectory != DefaultConfig().Cache.CacheDir {
-		if _, err := os.ReadDir(*cacheDirectory); err != nil {
-			os.MkdirAll(*cacheDirectory, 0664)
+	if *cacheDirectory != "" {
+		if _, err := os.ReadDir(os.ExpandEnv(*cacheDirectory)); err != nil {
+			os.MkdirAll(*cacheDirectory, 0777)
+			os.Chmod(*cacheDirectory, 0777)
 		}
 		CurrentConfig.Cache.CacheDir = *cacheDirectory
 	}
@@ -96,13 +97,19 @@ func HandleFlags() {
 			os.Exit(1)
 		}
 
-		cacheFiles, err := os.ReadDir(os.ExpandEnv(CurrentConfig.Cache.CacheDir))
-		deletedFiles := 0
+		currentCacheDir := CurrentConfig.Cache.CacheDir
+
+		if strings.Contains(currentCacheDir, "$XDG_CACHE_DIR") && os.Getenv("$XDG_CACHE_DIR") == "" {
+			currentCacheDir = strings.ReplaceAll(currentCacheDir, "$XDG_CACHE_DIR", "$HOME/.cache")
+		}
+
+		cacheFiles, err := os.ReadDir(os.ExpandEnv(currentCacheDir))
 
 		if err != nil {
 			fmt.Println("Something is wrong with the cache directory. Not created yet? Try and launch the main process.")
 		}
 
+		deletedFiles := 0
 		for _, cacheFile := range cacheFiles {
 			sections := strings.Split(cacheFile.Name(), ".")
 			if *songNameFilter != "" {
@@ -126,12 +133,14 @@ func HandleFlags() {
 				}
 			}
 
-			if os.Remove(os.ExpandEnv(CurrentConfig.Cache.CacheDir)+"/"+cacheFile.Name()) != nil {
+			if os.Remove(os.ExpandEnv(currentCacheDir)+"/"+cacheFile.Name()) != nil {
 				fmt.Printf("Couldn't delete file %v! Missing permissions?", cacheFile.Name())
 				continue
 			}
 			deletedFiles++
 		}
+
+		fmt.Printf("Deleted %v files, exiting...", deletedFiles)
 
 		os.Exit(0)
 	}

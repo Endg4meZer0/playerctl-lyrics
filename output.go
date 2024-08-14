@@ -132,35 +132,50 @@ func WriteLyrics() {
 // instrTimer.Stop to stop writing instrumental
 // instrTimer.Reset to continue again
 func WriteInstrumental() {
-	note := "♪"
+	note := CurrentConfig.Output.Instrumental.Symbol
 	i := 1
-	instrTimer.Reset(500 * time.Millisecond)
+	j := int(CurrentConfig.Output.Instrumental.MaxCount + 1)
+	instrTimer.Reset(time.Duration(CurrentConfig.Output.Instrumental.Interval*1000) * time.Millisecond)
 	for {
 		<-instrTimer.C
 		isPlaying = GetCurrentSongStatus()
 		// Not playing? Don't change anything, or it will look kinda strange
 		if !isPlaying {
-			instrTimer.Reset(500 * time.Millisecond)
+			instrTimer.Reset(time.Duration(CurrentConfig.Output.Instrumental.Interval*1000) * time.Millisecond)
 			continue
 		} else {
+			messagePrinted := false
 			switch currentSong.LyricsType {
 			case 1:
-				fmt.Println("This song's lyrics are not synced on LrcLib! " + strings.Repeat(note, i%4))
+				if CurrentConfig.Output.ShowNotSyncedLyricsWarning {
+					fmt.Println("This song's lyrics are not synced on LrcLib! " + strings.Repeat(note, i%j))
+					messagePrinted = true
+				}
 			case 3:
-				fmt.Println("Current song was not found on LrcLib! " + strings.Repeat(note, i%4))
+				if CurrentConfig.Output.ShowSongNotFoundWarning {
+					fmt.Println("Current song was not found on LrcLib! " + strings.Repeat(note, i%j))
+					messagePrinted = true
+				}
 			case 5:
-				fmt.Println("Getting lyrics... " + strings.Repeat(note, i%4))
+				if CurrentConfig.Output.ShowGettingLyricsMessage {
+					fmt.Println("Getting lyrics... " + strings.Repeat(note, i%j))
+					messagePrinted = true
+				}
 			case 6:
-				fmt.Println("Failed to get lyrics! " + strings.Repeat(note, i%4))
-			default:
-				fmt.Println(strings.Repeat(note, i%4))
+				fmt.Println("Failed to get lyrics! " + strings.Repeat(note, i%j))
+				messagePrinted = true
 			}
+
+			if !messagePrinted {
+				fmt.Println(strings.Repeat(note, i%j))
+			}
+
 			i++
 			// Don't want to cause any overflow here
-			if i > 3 {
+			if i > j-1 {
 				i = 1
 			}
-			instrTimer.Reset(500 * time.Millisecond)
+			instrTimer.Reset(time.Duration(CurrentConfig.Output.Instrumental.Interval*1000) * time.Millisecond)
 		}
 	}
 }
