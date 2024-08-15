@@ -28,12 +28,14 @@ type Cache struct {
 }
 
 type Output struct {
-	ShowSongNotFoundWarning         bool         `json:"showSongNotFoundWarning"`
-	ShowNotSyncedLyricsWarning      bool         `json:"showNotSyncedLyricsWarning"`
-	ShowGettingLyricsMessage        bool         `json:"showGettingLyricsMessage"`
-	ShowRepeatedLyricsMultiplicator bool         `json:"showRepeatedLyricsMultiplicator"`
-	Romanization                    Romanization `json:"romanization"`
-	Instrumental                    Instrumental `json:"instrumental"`
+	ShowSongNotFoundWarning                 bool         `json:"showSongNotFoundWarning"`
+	ShowNotSyncedLyricsWarning              bool         `json:"showNotSyncedLyricsWarning"`
+	ShowGettingLyricsMessage                bool         `json:"showGettingLyricsMessage"`
+	ShowRepeatedLyricsMultiplier            bool         `json:"showRepeatedLyricsMultiplier"`
+	RepeatedLyricsMultiplierFormat          string       `json:"repeatedLyricsMultiplierFormat"`
+	PrintRepeatedLyricsMultiplierToTheRight bool         `json:"printRepeatedLyricsMultiplierToTheRight"`
+	Romanization                            Romanization `json:"romanization"`
+	Instrumental                            Instrumental `json:"instrumental"`
 }
 
 // LEVEL 2
@@ -113,10 +115,12 @@ func DefaultConfig() Config {
 			CacheLifeSpan: 0,
 		},
 		Output: Output{
-			ShowSongNotFoundWarning:         true,
-			ShowNotSyncedLyricsWarning:      true,
-			ShowGettingLyricsMessage:        true,
-			ShowRepeatedLyricsMultiplicator: true,
+			ShowSongNotFoundWarning:                 true,
+			ShowNotSyncedLyricsWarning:              true,
+			ShowGettingLyricsMessage:                true,
+			ShowRepeatedLyricsMultiplier:            true,
+			RepeatedLyricsMultiplierFormat:          "(x%v)",
+			PrintRepeatedLyricsMultiplierToTheRight: true,
 			Romanization: Romanization{
 				Japanese: false,
 				Chinese:  false,
