@@ -94,11 +94,17 @@ func WriteLyrics() {
 						// 3) call the next writing goroutine
 						instrTimer.Stop()
 						if !wasPaused && (!playerUsesIntegerPosition || math.Abs(nextLyricTimestamp-currentTimestamp) >= 1.0) { // if the playback was paused, that usually causes lyric to print itself twice, so here's a little fuse
-							fmt.Print(lyric)
-							if lyricsRepeated > 1 {
-								fmt.Printf(" (x%v)", lyricsRepeated)
+							if CurrentConfig.Output.ShowRepeatedLyricsMultiplier && lyricsRepeated > 1 {
+								if CurrentConfig.Output.PrintRepeatedLyricsMultiplierToTheRight {
+									fmt.Print(lyric + " ")
+									fmt.Println(fmt.Sprintf(CurrentConfig.Output.RepeatedLyricsMultiplierFormat, lyricsRepeated))
+								} else {
+									fmt.Print(fmt.Sprintf(CurrentConfig.Output.RepeatedLyricsMultiplierFormat, lyricsRepeated) + " ")
+									fmt.Println(lyric)
+								}
+							} else {
+								fmt.Println(lyric)
 							}
-							fmt.Println()
 						}
 					}
 				}
