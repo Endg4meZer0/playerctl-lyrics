@@ -92,7 +92,12 @@ func GetSyncedLyrics(song *SongData) map[float64]string {
 		if err != nil {
 			continue
 		}
-		lyricStr := lyricParts[1]
+		var lyricStr string
+		if len(lyricParts) != 1 {
+			lyricStr = lyricParts[1]
+		} else {
+			lyricStr = ""
+		}
 		result[timecode] = lyricStr
 	}
 	return result
