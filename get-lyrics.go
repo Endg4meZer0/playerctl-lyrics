@@ -88,8 +88,8 @@ func GetSyncedLyrics(song *SongData) map[float64]string {
 	syncedLyrics := strings.Split(foundSong.SyncedLyrics, "\n")
 	for _, lyric := range syncedLyrics {
 		lyricParts := strings.SplitN(lyric, " ", 2)
-		timecode, err := TimecodeStrToFloat(lyricParts[0])
-		if err != nil {
+		timecode := TimecodeStrToFloat(lyricParts[0])
+		if timecode == -1 {
 			continue
 		}
 		var lyricStr string
@@ -103,17 +103,20 @@ func GetSyncedLyrics(song *SongData) map[float64]string {
 	return result
 }
 
-func TimecodeStrToFloat(timecode string) (float64, error) {
+func TimecodeStrToFloat(timecode string) float64 {
 	// [00:00.00]
+	if len(timecode) != 10 {
+		return -1
+	}
 	minutes, err := strconv.ParseFloat(timecode[1:3], 64)
 	if err != nil {
-		return -1, err
+		return -1
 	}
 	seconds, err := strconv.ParseFloat(timecode[4:9], 64)
 	if err != nil {
-		return -1, err
+		return -1
 	}
-	return minutes*60.0 + seconds, nil
+	return minutes*60.0 + seconds
 }
 
 func SendRequest(link url.URL) ([]LrcLibJson, bool) {
