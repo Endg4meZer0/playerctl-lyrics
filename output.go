@@ -43,7 +43,7 @@ func WriteLyrics() {
 				_, currentTimestampFloatPart := math.Modf(currentTimestamp)
 				playerUsesIntegerPosition := currentTimestampFloatPart < 0.000100
 
-				// 5999.99s is basically the maximum limit of .lrc files' timestamps, so 6000s is unreachable
+				// 5999.99s is basically the maximum limit of .lrc files' timestamps AFAIK, so 6000s is unreachable
 				firstLyricTimestamp := 6000.0
 				currentLyricTimestamp := -1.0
 				nextLyricTimestamp := 6000.0
