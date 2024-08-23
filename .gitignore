@@ -4,3 +4,4 @@
 playerctl-lyrics
 *.txt
 .fuse_hidden*
+test-*

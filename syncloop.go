@@ -1,14 +1,20 @@
 package main
 
 import (
+	"fmt"
 	"time"
 )
 
 func SyncLoop() {
 	var currentSong SongData
-	var currentLyrics map[float64]string
+	var currentTimestamps []float64
+	var currentLyrics []string
 
 	checkerTicker := time.NewTicker(time.Duration(CurrentConfig.Playerctl.PlayerctlSongCheckInterval*1000) * time.Millisecond)
+	positionCheckTicker := time.NewTicker(time.Second)
+
+	position := 0.0
+	var timeBeforeGettingLyrics time.Time
 
 	songChanged := make(chan bool, 1)
 	fullLyrChan := make(chan bool, 1)
@@ -25,11 +31,12 @@ func SyncLoop() {
 				continue
 			}
 
-			lyr := GetSyncedLyrics(&currentSong)
+			times, lyr := GetSyncedLyrics(&currentSong)
 			if currentSong.LyricsType == 5 {
 				currentSong.LyricsType = 6
 			}
 
+			currentTimestamps = times
 			currentLyrics = lyr
 			fullLyrChan <- true
 		}
@@ -41,14 +48,39 @@ func SyncLoop() {
 			<-checkerTicker.C
 			song := GetCurrentSongData()
 			if song.Song != currentSong.Song || song.Artist != currentSong.Artist || song.Album != currentSong.Album || song.Duration != currentSong.Duration {
+				position = GetCurrentSongPosition()
+				timeBeforeGettingLyrics = time.Now()
 				currentSong = song
-				UpdateData(currentLyrics, currentSong)
+				UpdateData(currentTimestamps, currentLyrics, currentSong, 0.0)
 
 				songChanged <- true
 			}
 		}
 	}()
 
+	// Goroutine to watch abnormal changes in player's position
+	// For example, seeking on a position bar is counted as abnormal
+	go func() {
+		for {
+			<-positionCheckTicker.C
+			initialPosition := GetCurrentSongPosition()
+			isPlaying := GetCurrentSongStatus()
+			requiredTicks := 10
+			for i := 0; i < requiredTicks; i++ {
+				time.Sleep(90 * time.Millisecond) // making up for the delay brought by playerctl
+				newPosition := GetCurrentSongPosition()
+				diff := newPosition - initialPosition
+				if diff > -0.1 && diff <= 1.1 && isPlaying { // 0.1 is an okay delta for both sides
+					continue
+				} else {
+					UpdatePosition(newPosition)
+					break
+				}
+			}
+		}
+	}()
+
+	// Goroutine to update data in the output thread
 	go func() {
 		for {
 			if !<-fullLyrChan {
@@ -63,14 +95,31 @@ func SyncLoop() {
 				}
 			}
 
-			UpdateData(currentLyrics, currentSong)
-			/*
-				Timer is made like this:
-				1) get the lyric from the map based on timestamp (we need the next lyric AFTER that timestamp)
-				2) make a goroutine that writes the lyric to stdout when the timestamp comes
-				3) should be recursive, so after the timer ticks, everything should begin from 1 again.
-				Probably will make an extra function for that
-			*/
+			if CurrentConfig.Output.ShowRepeatedLyricsMultiplier {
+				prevLyric := ""
+				count := 1
+				for i, lyric := range currentLyrics {
+					if lyric == prevLyric && lyric != "" {
+						count++
+					} else {
+						count = 1
+						prevLyric = lyric
+					}
+
+					if count != 1 {
+						if CurrentConfig.Output.PrintRepeatedLyricsMultiplierToTheRight {
+							currentLyrics[i] = fmt.Sprintf(lyric+" "+CurrentConfig.Output.RepeatedLyricsMultiplierFormat, count)
+						} else {
+							currentLyrics[i] = fmt.Sprintf(CurrentConfig.Output.RepeatedLyricsMultiplierFormat+" "+lyric, count)
+						}
+					}
+				}
+			}
+
+			timeAfterGettingLyrics := time.Now()
+			position += timeAfterGettingLyrics.Sub(timeBeforeGettingLyrics).Seconds() + 0.1 // tests have shown that additional 0.1 is required to look good
+
+			UpdateData(currentTimestamps, currentLyrics, currentSong, position)
 		}
 	}()
 

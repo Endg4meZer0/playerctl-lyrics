@@ -9,15 +9,24 @@ import (
 
 var lyricsTimer = time.NewTimer(100 * time.Minute)
 var instrTimer = time.NewTimer(500 * time.Millisecond)
-var currentLyrics map[float64]string
+var currentTimestamps []float64
+var currentLyrics []string
 var currentSong = SongData{LyricsType: 5}
-var prevLyric = ""
-var lyricsRepeated uint = 0
 var isPlaying = false
+var currentPosition = 0.0
+var firstInstanceForSong = false
 
-func UpdateData(newLyrics map[float64]string, newSong SongData) {
+func UpdateData(newTimes []float64, newLyrics []string, newSong SongData, position float64) {
+	currentTimestamps = newTimes
 	currentLyrics = newLyrics
 	currentSong = newSong
+	currentPosition = position
+	lyricsTimer.Reset(100)
+	instrTimer.Stop()
+}
+
+func UpdatePosition(newPosition float64) {
+	currentPosition = newPosition
 	lyricsTimer.Reset(100)
 	instrTimer.Stop()
 }
@@ -32,16 +41,7 @@ func WriteLyrics() {
 			} else if currentSong.LyricsType >= 2 {
 				instrTimer.Reset(1)
 			} else {
-				wasPaused := !isPlaying
 				isPlaying = GetCurrentSongStatus()
-				currentTimestamp := GetCurrentSongPosition()
-
-				// if a floating part is less than that value down there (tested on cmus, may differ between players)
-				// then make an assumption that the player uses integers as position markers
-				// and we'll allow the timestamps to be equal or greater only by seconds, not milliseconds
-				// 99% sure it can be done better but since it works as of now...
-				_, currentTimestampFloatPart := math.Modf(currentTimestamp)
-				playerUsesIntegerPosition := currentTimestampFloatPart < 0.000100
 
 				// 5999.99s is basically the maximum limit of .lrc files' timestamps AFAIK, so 6000s is unreachable
 				firstLyricTimestamp := 6000.0
@@ -49,23 +49,17 @@ func WriteLyrics() {
 				nextLyricTimestamp := 6000.0
 				lyric := ""
 
-				for lyricTimestamp, l := range currentLyrics {
-					if firstLyricTimestamp > lyricTimestamp {
-						firstLyricTimestamp = lyricTimestamp
+				for i, timestamp := range currentTimestamps {
+					if firstLyricTimestamp > timestamp {
+						firstLyricTimestamp = timestamp
 					}
-					if lyricTimestamp < currentTimestamp && currentLyricTimestamp <= lyricTimestamp {
-						currentLyricTimestamp = lyricTimestamp
-						lyric = l
+					if timestamp <= currentPosition && currentLyricTimestamp <= timestamp {
+						currentLyricTimestamp = timestamp
+						lyric = currentLyrics[i]
 					}
-					if lyricTimestamp > currentTimestamp && nextLyricTimestamp > lyricTimestamp {
-						nextLyricTimestamp = lyricTimestamp
+					if timestamp > currentPosition && nextLyricTimestamp > timestamp {
+						nextLyricTimestamp = timestamp
 					}
-				}
-
-				if lyric == prevLyric {
-					lyricsRepeated++
-				} else {
-					lyricsRepeated = 1
 				}
 
 				if nextLyricTimestamp == 6000.0 {
@@ -76,11 +70,11 @@ func WriteLyrics() {
 					nextLyricTimestamp = math.Abs(currentSong.Duration) + 0.1
 				}
 
-				prevLyric = lyric
+				lyricsTimerDuration := time.Duration(int64(math.Abs(nextLyricTimestamp-currentPosition-0.01)*1000)) * time.Millisecond // tests have shown that it slows down and mismatches without additional 0.01 offset
 
-				// If the currentTimestamp is less than even the first timestamp of the lyrics
+				// If the currentPosition is less than even the first timestamp of the lyrics
 				// then reset an instrumental ticker until the first lyric shows up
-				if currentTimestamp < firstLyricTimestamp {
+				if currentPosition < firstLyricTimestamp {
 					instrTimer.Reset(1)
 				} else if isPlaying { // If paused then don't print the lyric and instead try once more time later
 					if lyric == "" {
@@ -93,43 +87,11 @@ func WriteLyrics() {
 						// 2) print itself
 						// 3) call the next writing goroutine
 						instrTimer.Stop()
-						if !wasPaused && (!playerUsesIntegerPosition || math.Abs(nextLyricTimestamp-currentTimestamp) >= 1.0) { // if the playback was paused, that usually causes lyric to print itself twice, so here's a little fuse
-							if CurrentConfig.Output.ShowRepeatedLyricsMultiplier && lyricsRepeated > 1 {
-								if CurrentConfig.Output.PrintRepeatedLyricsMultiplierToTheRight {
-									fmt.Print(lyric + " ")
-									fmt.Println(fmt.Sprintf(CurrentConfig.Output.RepeatedLyricsMultiplierFormat, lyricsRepeated))
-								} else {
-									fmt.Print(fmt.Sprintf(CurrentConfig.Output.RepeatedLyricsMultiplierFormat, lyricsRepeated) + " ")
-									fmt.Println(lyric)
-								}
-							} else {
-								fmt.Println(lyric)
-							}
-						}
+						fmt.Println(lyric)
 					}
 				}
-				lyricsTimerDuration := time.Duration(int64(math.Abs(nextLyricTimestamp-currentTimestamp)*1000)) * time.Millisecond
+				currentPosition = nextLyricTimestamp
 				lyricsTimer.Reset(lyricsTimerDuration)
-				if lyricsTimerDuration/time.Millisecond > 1500 {
-					positionCheckTicker := time.NewTicker(1.5 * 1000 * time.Millisecond)
-					expectedTicks := int(math.Floor(float64(lyricsTimerDuration/time.Millisecond/1000) / 1.5))
-					currentTick := 0
-					// Resets the lyric timer if it sees an unusual position change
-					go func() {
-						for {
-							<-positionCheckTicker.C
-							currentTick++
-							receivedPosition := GetCurrentSongPosition()
-							if receivedPosition < math.Floor(currentLyricTimestamp) || receivedPosition > math.Ceil(nextLyricTimestamp) || currentTick >= expectedTicks {
-								positionCheckTicker.Stop()
-								if currentTick < expectedTicks {
-									lyricsTimer.Reset(1)
-								}
-								return
-							}
-						}
-					}()
-				}
 			}
 		}
 	}()
