@@ -6,7 +6,7 @@ This small thingie is primarily designed for bars like [waybar](https://github.c
 https://github.com/user-attachments/assets/209ddfdd-0c2a-4ce6-a213-b9796a154c28
 
 ## Warning!
-The support for players that use seconds as position data like cmus is present and works great, but still can be a bit unstable. It is recommended to use players that use milliseconds as position data. For example, Spotify works great.
+The support for players that use seconds as position data like cmus is present and works good, but still can be unstable. It is recommended to use players that use milliseconds as position data. For example, Spotify works great.
 
 ## Build
 ```
