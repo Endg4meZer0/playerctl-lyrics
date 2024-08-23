@@ -64,7 +64,7 @@ func GetSyncedLyrics(song *SongData) ([]float64, []string) {
 
 		foundSong = foundSongs[0]
 
-		if CurrentConfig.Cache.DoCacheLyrics {
+		if CurrentConfig.Cache.Enabled {
 			if err := StoreCachedLyrics(song, foundSong); err != nil {
 				log.Println("Could not save the lyrics to the cache! Are there writing perms?")
 			}

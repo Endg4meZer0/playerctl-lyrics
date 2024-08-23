@@ -22,7 +22,7 @@ type Playerctl struct {
 }
 
 type Cache struct {
-	DoCacheLyrics bool   `json:"doCacheLyrics"`
+	Enabled       bool   `json:"enabled"`
 	CacheDir      string `json:"cacheDir"`
 	CacheLifeSpan uint   `json:"cacheLifeSpan"`
 }
@@ -110,7 +110,7 @@ func DefaultConfig() Config {
 			PlayerctlSongCheckInterval: 1.0,
 		},
 		Cache: Cache{
-			DoCacheLyrics: true,
+			Enabled:       true,
 			CacheDir:      "$XDG_CACHE_DIR/playerctl-lyrics",
 			CacheLifeSpan: 0,
 		},

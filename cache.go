@@ -28,7 +28,7 @@ func GetCachedLyrics(song *SongData) (LrcLibJson, bool) {
 			return LrcLibJson{}, false
 		}
 
-		if CurrentConfig.Cache.DoCacheLyrics && CurrentConfig.Cache.CacheLifeSpan != 0 {
+		if CurrentConfig.Cache.Enabled && CurrentConfig.Cache.CacheLifeSpan != 0 {
 			cacheStats, _ := os.Lstat(cacheDirectory + "/" + filename + ".json")
 			return result, time.Since(cacheStats.ModTime()).Hours() <= float64(CurrentConfig.Cache.CacheLifeSpan)*24
 		} else {
