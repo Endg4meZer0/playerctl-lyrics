@@ -9,18 +9,11 @@ import (
 
 var lyricsTimer = time.NewTimer(5 * time.Minute)
 var instrTimer = time.NewTimer(5 * time.Minute)
-var currentTimestamps []float64
-var currentLyrics []string
 var currentSong = SongData{LyricsType: 5}
-var isPlaying = false
 var currentPosition = 0.0
 
-func UpdateData(newTimes []float64, newLyrics []string, newSong SongData) {
-	currentTimestamps = newTimes
-	currentLyrics = newLyrics
+func UpdateData(newSong SongData) {
 	currentSong = newSong
-	lyricsTimer.Reset(1)
-	instrTimer.Stop()
 }
 
 func UpdatePosition(newPosition float64) {
@@ -39,7 +32,10 @@ func WriteLyrics() {
 			} else if currentSong.LyricsType >= 2 {
 				instrTimer.Reset(1)
 			} else {
-				isPlaying = GetCurrentSongStatus()
+				isPlaying, currentPlayerPosition := GetPlayerData()
+				if math.Abs(currentPosition-currentPlayerPosition) > 1 {
+					currentPosition = currentPlayerPosition
+				}
 
 				// 5999.99s is basically the maximum limit of .lrc files' timestamps AFAIK, so 6000s is unreachable
 				currentLyricTimestamp := -1.0
@@ -47,16 +43,16 @@ func WriteLyrics() {
 				lyric := ""
 				timestampIndex := -1
 
-				for i, timestamp := range currentTimestamps {
+				for i, timestamp := range currentSong.LyricTimestamps {
 					if timestamp <= currentPosition && currentLyricTimestamp <= timestamp {
 						currentLyricTimestamp = timestamp
-						lyric = currentLyrics[i]
+						lyric = currentSong.Lyrics[i]
 						timestampIndex = i
 					}
 				}
 
-				if timestampIndex != len(currentTimestamps) {
-					nextLyricTimestamp = currentTimestamps[timestampIndex+1]
+				if timestampIndex != len(currentSong.LyricTimestamps)-1 {
+					nextLyricTimestamp = currentSong.LyricTimestamps[timestampIndex+1]
 				}
 
 				lyricsTimerDuration := time.Duration(int64(math.Abs(nextLyricTimestamp-currentPosition-0.01)*1000)) * time.Millisecond // tests have shown that it slows down and mismatches without additional 0.01 offset
@@ -96,7 +92,7 @@ func WriteInstrumental() {
 	for {
 		<-instrTimer.C
 		// Not playing? Don't change anything, or it will look kinda strange
-		if GetCurrentSongStatus() {
+		if isPlaying, _ := GetPlayerData(); isPlaying {
 			switch currentSong.LyricsType {
 			case 1:
 				if CurrentConfig.Output.ShowNotSyncedLyricsWarning {

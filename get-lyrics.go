@@ -39,9 +39,8 @@ func MakeURLSearch(song *SongData) url.URL {
 	return *lrclibURL
 }
 
-// Return either a slice of strings that correspond to song's lyrics and a 'false' or nil and 'true'.
-// If []string is nil AND bool is false, then it's an error.
-func GetSyncedLyrics(song *SongData) ([]float64, []string) {
+// Sets the Lyrics and LyricTimestamps properties in SongData object.
+func GetSyncedLyrics(song *SongData) {
 	foundSong, isNotExpired := GetCachedLyrics(song)
 	if (!foundSong.Instrumental && foundSong.PlainLyrics == "" && foundSong.SyncedLyrics == "") || !isNotExpired {
 		lrclibURL := MakeURLGet(song)
@@ -59,7 +58,7 @@ func GetSyncedLyrics(song *SongData) ([]float64, []string) {
 
 		if !found {
 			song.LyricsType = 3
-			return nil, nil
+			return
 		}
 
 		foundSong = foundSongs[0]
@@ -73,18 +72,18 @@ func GetSyncedLyrics(song *SongData) ([]float64, []string) {
 
 	if foundSong.Instrumental {
 		song.LyricsType = 2
-		return nil, nil
+		return
 	}
 
 	if foundSong.PlainLyrics != "" && foundSong.SyncedLyrics == "" {
 		song.LyricsType = 1
-		return nil, nil
+		return
 	}
 
 	song.LyricsType = 0
 
-	resultTimestamps := []float64{}
 	resultLyrics := []string{}
+	resultTimestamps := []float64{}
 
 	syncedLyrics := strings.Split(foundSong.SyncedLyrics, "\n")
 	for _, lyric := range syncedLyrics {
@@ -99,10 +98,12 @@ func GetSyncedLyrics(song *SongData) ([]float64, []string) {
 		} else {
 			lyricStr = ""
 		}
-		resultTimestamps = append(resultTimestamps, timecode)
 		resultLyrics = append(resultLyrics, lyricStr)
+		resultTimestamps = append(resultTimestamps, timecode)
 	}
-	return resultTimestamps, resultLyrics
+
+	song.Lyrics = resultLyrics
+	song.LyricTimestamps = resultTimestamps
 }
 
 func TimecodeStrToFloat(timecode string) float64 {

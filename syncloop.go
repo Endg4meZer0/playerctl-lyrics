@@ -8,8 +8,6 @@ import (
 
 func SyncLoop() {
 	var currentSong SongData
-	var currentTimestamps []float64
-	var currentLyrics []string
 
 	checkerTicker := time.NewTicker(time.Duration(CurrentConfig.Playerctl.PlayerctlSongCheckInterval*1000) * time.Millisecond)
 	positionCheckTicker := time.NewTicker(time.Second)
@@ -24,12 +22,12 @@ func SyncLoop() {
 	go func() {
 		for {
 			<-checkerTicker.C
-			song := GetCurrentSongData()
+			song := GetSongData()
 			if song.Song != currentSong.Song || song.Artist != currentSong.Artist || song.Album != currentSong.Album || song.Duration != currentSong.Duration {
-				position = GetCurrentSongPosition()
+				_, position = GetPlayerData()
 				timeBeforeGettingLyrics = time.Now()
 				currentSong = song
-				UpdateData(currentTimestamps, currentLyrics, currentSong)
+				UpdateData(currentSong)
 
 				songChanged <- true
 			}
@@ -48,13 +46,11 @@ func SyncLoop() {
 				continue
 			}
 
-			times, lyr := GetSyncedLyrics(&currentSong)
+			GetSyncedLyrics(&currentSong)
 			if currentSong.LyricsType == 5 {
 				currentSong.LyricsType = 6
 			}
 
-			currentTimestamps = times
-			currentLyrics = lyr
 			fullLyrChan <- true
 		}
 	}()
@@ -64,14 +60,13 @@ func SyncLoop() {
 	go func() {
 		for {
 			<-positionCheckTicker.C
-			initialPosition := GetCurrentSongPosition()
-			isPlaying := GetCurrentSongStatus()
+			_, initialPosition := GetPlayerData()
 			requiredTicks := 10
 			for i := 0; i < requiredTicks; i++ {
 				time.Sleep(90 * time.Millisecond) // making up for the delay brought by playerctl
-				newPosition := GetCurrentSongPosition()
+				isStillPlaying, newPosition := GetPlayerData()
 				diff := newPosition - initialPosition
-				if diff > -0.1 && diff <= 1.1 && isPlaying { // 0.1 is an okay delta for both sides
+				if diff > -0.1 && diff <= 1.1 && isStillPlaying { // 0.1 is an okay delta for both sides
 					continue
 				} else {
 					UpdatePosition(newPosition)
@@ -84,15 +79,13 @@ func SyncLoop() {
 	// Goroutine to update data in the output thread
 	go func() {
 		for {
-			if !<-fullLyrChan {
-				currentLyrics = nil
-			}
+			<-fullLyrChan
 
 			prevLyric := ""
 			count := 1
-			for i, lyric := range currentLyrics {
+			for i, lyric := range currentSong.Lyrics {
 				if CurrentConfig.Output.Romanization.IsEnabled() && IsSupportedAsianLang(lyric) {
-					currentLyrics[i] = Romanize(lyric)
+					currentSong.Lyrics[i] = Romanize(lyric)
 				}
 				if CurrentConfig.Output.ShowRepeatedLyricsMultiplier {
 					if lyric == prevLyric && lyric != "" {
@@ -104,9 +97,9 @@ func SyncLoop() {
 
 					if count != 1 {
 						if CurrentConfig.Output.PrintRepeatedLyricsMultiplierToTheRight {
-							currentLyrics[i] = fmt.Sprintf(lyric+" "+CurrentConfig.Output.RepeatedLyricsMultiplierFormat, count)
+							currentSong.Lyrics[i] = fmt.Sprintf(lyric+" "+CurrentConfig.Output.RepeatedLyricsMultiplierFormat, count)
 						} else {
-							currentLyrics[i] = fmt.Sprintf(CurrentConfig.Output.RepeatedLyricsMultiplierFormat+" "+lyric, count)
+							currentSong.Lyrics[i] = fmt.Sprintf(CurrentConfig.Output.RepeatedLyricsMultiplierFormat+" "+lyric, count)
 						}
 					}
 				}
@@ -115,7 +108,7 @@ func SyncLoop() {
 			timeAfterGettingLyrics := time.Now()
 			position += math.Max(timeAfterGettingLyrics.Sub(timeBeforeGettingLyrics).Seconds(), 0) + 0.1 // tests have shown that additional 0.1 is required to look good
 
-			UpdateData(currentTimestamps, currentLyrics, currentSong)
+			UpdateData(currentSong)
 			UpdatePosition(position)
 		}
 	}()
