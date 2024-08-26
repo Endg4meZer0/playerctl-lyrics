@@ -29,7 +29,6 @@ Get more info on on available options with `playerctl-lyrics -help` or on [wiki]
 - [x] ~~Options handling~~
 - [x] ~~Configuration~~
 - [x] ~~Better handling of players with seconds as position data~~
-- [ ] Scroll the line if the lyric has more characters than allowed
 - [ ] An ability to print lyrics to a file (same concept, one lyric at a time in sync)
 - [ ] More different configuration options?
 - [ ] There is always more!
