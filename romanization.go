@@ -38,18 +38,25 @@ func Romanize(str string) (out string) {
 	if CurrentConfig.Output.Romanization.Japanese && out != strings.ToLower(str) {
 		out = strings.ToUpper(out[:1]) + out[1:]
 		return
+	} else {
+		out = str
 	}
 
 	out = zhCharToPinyin(str)
 	if CurrentConfig.Output.Romanization.Chinese && out != str {
 		out = strings.ToUpper(out[:1]) + out[1:]
 		return
+	} else {
+		out = str
 	}
+
 	r := kr.NewRomanizer(str)
 	out = r.Romanize()
 	if CurrentConfig.Output.Romanization.Korean && out != str {
 		out = strings.ToUpper(out[:1]) + out[1:]
 		return
+	} else {
+		out = str
 	}
 
 	return
