@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"math"
 	"time"
 )
 
@@ -18,6 +19,22 @@ func SyncLoop() {
 
 	songChanged := make(chan bool, 1)
 	fullLyrChan := make(chan bool, 1)
+
+	// Goroutine to check for changes in currently playing song
+	go func() {
+		for {
+			<-checkerTicker.C
+			song := GetCurrentSongData()
+			if song.Song != currentSong.Song || song.Artist != currentSong.Artist || song.Album != currentSong.Album || song.Duration != currentSong.Duration {
+				position = GetCurrentSongPosition()
+				timeBeforeGettingLyrics = time.Now()
+				currentSong = song
+				UpdateData(currentTimestamps, currentLyrics, currentSong)
+
+				songChanged <- true
+			}
+		}
+	}()
 
 	// Goroutine to wait for incoming song metadata (lyrics and instrumental bool)
 	go func() {
@@ -39,22 +56,6 @@ func SyncLoop() {
 			currentTimestamps = times
 			currentLyrics = lyr
 			fullLyrChan <- true
-		}
-	}()
-
-	// Goroutine to check for changes in currently playing song
-	go func() {
-		for {
-			<-checkerTicker.C
-			song := GetCurrentSongData()
-			if song.Song != currentSong.Song || song.Artist != currentSong.Artist || song.Album != currentSong.Album || song.Duration != currentSong.Duration {
-				position = GetCurrentSongPosition()
-				timeBeforeGettingLyrics = time.Now()
-				currentSong = song
-				UpdateData(currentTimestamps, currentLyrics, currentSong, 0.0)
-
-				songChanged <- true
-			}
 		}
 	}()
 
@@ -87,18 +88,13 @@ func SyncLoop() {
 				currentLyrics = nil
 			}
 
-			if CurrentConfig.Output.Romanization.IsEnabled() {
-				for i, lyric := range currentLyrics {
-					if IsSupportedAsianLang(lyric) {
-						currentLyrics[i] = Romanize(lyric)
-					}
+			prevLyric := ""
+			count := 1
+			for i, lyric := range currentLyrics {
+				if CurrentConfig.Output.Romanization.IsEnabled() && IsSupportedAsianLang(lyric) {
+					currentLyrics[i] = Romanize(lyric)
 				}
-			}
-
-			if CurrentConfig.Output.ShowRepeatedLyricsMultiplier {
-				prevLyric := ""
-				count := 1
-				for i, lyric := range currentLyrics {
+				if CurrentConfig.Output.ShowRepeatedLyricsMultiplier {
 					if lyric == prevLyric && lyric != "" {
 						count++
 					} else {
@@ -117,9 +113,10 @@ func SyncLoop() {
 			}
 
 			timeAfterGettingLyrics := time.Now()
-			position += timeAfterGettingLyrics.Sub(timeBeforeGettingLyrics).Seconds() + 0.1 // tests have shown that additional 0.1 is required to look good
+			position += math.Max(timeAfterGettingLyrics.Sub(timeBeforeGettingLyrics).Seconds(), 0) + 0.1 // tests have shown that additional 0.1 is required to look good
 
-			UpdateData(currentTimestamps, currentLyrics, currentSong, position)
+			UpdateData(currentTimestamps, currentLyrics, currentSong)
+			UpdatePosition(position)
 		}
 	}()
 
