@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"math"
 	"os"
@@ -12,7 +11,7 @@ import (
 
 var badCharactersRegexp = regexp.MustCompile(`[:;|\/\\<>\.]+`)
 
-func GetCachedLyrics(song *SongData) (LrcLibJson, bool) {
+func GetCachedLyrics(song *SongData) (string, bool) {
 	cacheDirectory := CurrentConfig.Cache.CacheDir
 	if strings.Contains(cacheDirectory, "$XDG_CACHE_DIR") && os.Getenv("$XDG_CACHE_DIR") == "" {
 		cacheDirectory = strings.ReplaceAll(cacheDirectory, "$XDG_CACHE_DIR", "$HOME/.cache")
@@ -21,25 +20,21 @@ func GetCachedLyrics(song *SongData) (LrcLibJson, bool) {
 	cacheDirectory = os.ExpandEnv(cacheDirectory)
 
 	filename := getFilename(song.Song, song.Artist, song.Album, song.Duration)
-	if file, err := os.ReadFile(cacheDirectory + "/" + filename + ".json"); err == nil {
-		var result LrcLibJson
-		err = json.Unmarshal(file, &result)
-		if err != nil {
-			return LrcLibJson{}, false
-		}
+	fullPath := cacheDirectory + "/" + filename + ".lrc"
 
+	if file, err := os.ReadFile(fullPath); err == nil {
 		if CurrentConfig.Cache.Enabled && CurrentConfig.Cache.CacheLifeSpan != 0 {
-			cacheStats, _ := os.Lstat(cacheDirectory + "/" + filename + ".json")
-			return result, time.Since(cacheStats.ModTime()).Hours() <= float64(CurrentConfig.Cache.CacheLifeSpan)*24
+			cacheStats, _ := os.Lstat(fullPath)
+			return string(file), time.Since(cacheStats.ModTime()).Hours() <= float64(CurrentConfig.Cache.CacheLifeSpan)*24
 		} else {
-			return result, true
+			return string(file), true
 		}
 	} else {
-		return LrcLibJson{}, false
+		return "", false
 	}
 }
 
-func StoreCachedLyrics(song *SongData, lrcData LrcLibJson) error {
+func StoreCachedLyrics(song *SongData, lrcData string) error {
 	cacheDirectory := CurrentConfig.Cache.CacheDir
 	if strings.Contains(cacheDirectory, "$XDG_CACHE_DIR") && os.Getenv("$XDG_CACHE_DIR") == "" {
 		cacheDirectory = strings.ReplaceAll(cacheDirectory, "$XDG_CACHE_DIR", "$HOME/.cache")
@@ -52,16 +47,10 @@ func StoreCachedLyrics(song *SongData, lrcData LrcLibJson) error {
 		os.Chmod(cacheDirectory, 0777)
 	}
 
-	if lrcData.PlainLyrics != "" {
-		lrcData.PlainLyrics = "yes"
-	}
-
 	filename := getFilename(song.Song, song.Artist, song.Album, song.Duration)
-	data, err := json.Marshal(lrcData)
-	if err != nil {
-		return err
-	}
-	if err = os.WriteFile(cacheDirectory+"/"+filename+".json", data, 0777); err != nil {
+	fullPath := cacheDirectory + "/" + filename + ".lrc"
+
+	if err := os.WriteFile(fullPath, []byte(lrcData), 0777); err != nil {
 		return err
 	}
 	return nil
