@@ -107,12 +107,12 @@ func DefaultConfig() Config {
 		Playerctl: Playerctl{
 			IncludedPlayers:            []string{},
 			ExcludedPlayers:            []string{},
-			PlayerctlSongCheckInterval: 1.0,
+			PlayerctlSongCheckInterval: 0.5,
 		},
 		Cache: Cache{
 			Enabled:       true,
 			CacheDir:      "$XDG_CACHE_DIR/playerctl-lyrics",
-			CacheLifeSpan: 0,
+			CacheLifeSpan: 14,
 		},
 		Output: Output{
 			ShowSongNotFoundWarning:                 true,
