@@ -26,6 +26,10 @@ func main() {
 
 	HandleFlags()
 
+	defer func() {
+		OutputDestination.Close()
+	}()
+
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 
@@ -46,8 +50,9 @@ var helpText = []string{
 
 func HandleFlags() {
 	configPath := flag.String("config", "", "Sets the config file to use")
-	clearCacheMode := flag.Bool("clear-cache", false, "If true, searches the cache directory, removes cache files that fit the filters (-song-name, -song-artist, etc.) and exits. Only songs that contain the set patterns will be affected")
 	cacheDirectory := flag.String("cache-dir", "", "Sets the cache directory")
+	outputFilePath := flag.String("output", "", "Sets an output file to use instead of standard output")
+	clearCacheMode := flag.Bool("clear-cache", false, "If true, searches the cache directory, removes cache files that fit the filters (-song-name, -song-artist, etc.) and exits. Only songs that contain the set patterns will be affected")
 	songNameFilter := flag.String("song-name-filter", "", "Sets the song name filter to use when -clear-cache is also set")
 	artistNameFilter := flag.String("artist-name-filter", "", "Sets the artist name filter to use when -clear-cache is also set")
 	albumNameFilter := flag.String("album-name-filter", "", "Sets the album name filter to use when -clear-cache is also set")
@@ -89,6 +94,11 @@ func HandleFlags() {
 			os.Chmod(*cacheDirectory, 0777)
 		}
 		CurrentConfig.Cache.CacheDir = *cacheDirectory
+	}
+
+	if *outputFilePath != "" {
+		t := os.ExpandEnv(*outputFilePath)
+		UpdateOutputDestination(t)
 	}
 
 	if *clearCacheMode {
