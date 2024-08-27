@@ -34,7 +34,7 @@ func GetCachedLyrics(song *SongData) (string, bool) {
 	}
 }
 
-func StoreCachedLyrics(song *SongData, lrcData string) error {
+func StoreCachedLyrics(song SongData, lrcData string) error {
 	cacheDirectory := CurrentConfig.Cache.CacheDir
 	if strings.Contains(cacheDirectory, "$XDG_CACHE_DIR") && os.Getenv("$XDG_CACHE_DIR") == "" {
 		cacheDirectory = strings.ReplaceAll(cacheDirectory, "$XDG_CACHE_DIR", "$HOME/.cache")
