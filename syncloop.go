@@ -11,6 +11,8 @@ func SyncLoop() {
 
 	checkerTicker := time.NewTicker(time.Duration(CurrentConfig.Playerctl.PlayerctlSongCheckInterval*1000) * time.Millisecond)
 	positionCheckTicker := time.NewTicker(time.Second)
+	positionInnerCheckTicker := time.NewTicker(time.Second)
+	positionInnerCheckTicker.Stop()
 
 	position := 0.0
 	var timeBeforeGettingLyrics time.Time
@@ -62,17 +64,20 @@ func SyncLoop() {
 			<-positionCheckTicker.C
 			_, initialPosition := GetPlayerData()
 			requiredTicks := 10
-			for i := 0; i < requiredTicks; i++ {
-				time.Sleep(90 * time.Millisecond) // making up for the delay brought by playerctl
-				isStillPlaying, newPosition := GetPlayerData()
-				diff := newPosition - initialPosition
-				if diff > -0.1 && diff <= 1.1 && isStillPlaying { // 0.1 is an okay delta for both sides
-					continue
-				} else {
-					UpdatePosition(newPosition)
-					break
+			positionInnerCheckTicker.Reset(100 * time.Millisecond)
+			go func() {
+				for i := 0; i < requiredTicks; i++ {
+					<-positionInnerCheckTicker.C
+					isStillPlaying, newPosition := GetPlayerData()
+					diff := newPosition - (initialPosition + 0.1*(float64(i)+1))
+					if !(diff <= 0.15 && isStillPlaying) { // 0.05 is an okay delta
+						fmt.Println(newPosition, initialPosition, initialPosition+0.1*(float64(i)+1), diff)
+						UpdatePosition(newPosition)
+						positionCheckTicker.Reset(time.Second)
+						break
+					}
 				}
-			}
+			}()
 		}
 	}()
 
