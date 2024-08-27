@@ -35,7 +35,7 @@ func Romanize(str string) (out string) {
 	}()
 
 	if CurrentConfig.Output.Romanization.Japanese {
-		out = jp.ToRomaji(str, false)
+		out = jp.ToRomaji(str, true)
 		if out != strings.ToLower(str) {
 			if !isChar(out[:3], supportedAsianLangsUnicodeRangeTable) {
 				out = strings.ToUpper(out[:1]) + out[1:]
