@@ -27,7 +27,7 @@ func main() {
 	HandleFlags()
 
 	defer func() {
-		OutputDestination.Close()
+		CloseOutput()
 	}()
 
 	sigs := make(chan os.Signal, 1)
@@ -86,6 +86,10 @@ func HandleFlags() {
 			fmt.Println("The config from default path is no valid! Falling back to the default config...\nErrors: ", err.Error())
 			CurrentConfig = DefaultConfig()
 		}
+	}
+
+	if CurrentConfig.Output.TerminalOutputInOneLine {
+		fmt.Println()
 	}
 
 	if *cacheDirectory != "" {

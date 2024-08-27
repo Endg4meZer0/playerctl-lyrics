@@ -5,12 +5,17 @@ import (
 	"os"
 )
 
-var OutputDestination *os.File = os.Stdout
+var outputDestination *os.File = os.Stdout
+var outputDestChanged bool = false
 
 func PrintLyric(lyric string) {
-	OutputDestination.Truncate(0)
-	OutputDestination.Seek(0, 0)
-	OutputDestination.WriteString(lyric + "\n")
+	if outputDestChanged {
+		outputDestination.Truncate(0)
+		outputDestination.Seek(0, 0)
+	} else if CurrentConfig.Output.TerminalOutputInOneLine {
+		outputDestination.WriteString("\033[1A\033[K\r")
+	}
+	outputDestination.WriteString(lyric + "\n")
 }
 
 func UpdateOutputDestination(path string) {
@@ -18,6 +23,11 @@ func UpdateOutputDestination(path string) {
 	if err != nil {
 		log.Println("The output file was set, but I can't create/open it! Permissions issue or wrong path?")
 	} else {
-		OutputDestination = newDest
+		outputDestination = newDest
+		outputDestChanged = true
 	}
+}
+
+func CloseOutput() {
+	outputDestination.Close()
 }

@@ -28,6 +28,7 @@ type Cache struct {
 }
 
 type Output struct {
+	TerminalOutputInOneLine                 bool         `json:"terminalOutputInOneLine"`
 	ShowSongNotFoundWarning                 bool         `json:"showSongNotFoundWarning"`
 	ShowNotSyncedLyricsWarning              bool         `json:"showNotSyncedLyricsWarning"`
 	ShowGettingLyricsMessage                bool         `json:"showGettingLyricsMessage"`
@@ -115,6 +116,7 @@ func DefaultConfig() Config {
 			CacheLifeSpan: 14,
 		},
 		Output: Output{
+			TerminalOutputInOneLine:                 false,
 			ShowSongNotFoundWarning:                 true,
 			ShowNotSyncedLyricsWarning:              true,
 			ShowGettingLyricsMessage:                true,
