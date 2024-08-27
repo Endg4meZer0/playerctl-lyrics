@@ -35,30 +35,26 @@ func Romanize(str string) (out string) {
 	}()
 
 	if CurrentConfig.Output.Romanization.Japanese {
-		out = jp.ToRomaji(str, true)
+		out = jp.ToRomaji(str, false)
 		if out != strings.ToLower(str) {
-			if !isChar(out[:1], supportedAsianLangsUnicodeRangeTable) {
+			if !isChar(out[:3], supportedAsianLangsUnicodeRangeTable) {
 				out = strings.ToUpper(out[:1]) + out[1:]
 			}
 			return
 		}
-	}
-
-	if CurrentConfig.Output.Romanization.Chinese {
+	} else if CurrentConfig.Output.Romanization.Chinese {
 		out = zhCharToPinyin(str)
 		if out != str {
-			if !isChar(out[:1], supportedAsianLangsUnicodeRangeTable) {
+			if !isChar(out[:3], supportedAsianLangsUnicodeRangeTable) {
 				out = strings.ToUpper(out[:1]) + out[1:]
 			}
 			return
 		}
-	}
-
-	if CurrentConfig.Output.Romanization.Korean {
+	} else if CurrentConfig.Output.Romanization.Korean {
 		r := kr.NewRomanizer(str)
 		out = r.Romanize()
 		if out != str {
-			if !isChar(out[:1], supportedAsianLangsUnicodeRangeTable) {
+			if !isChar(out[:3], supportedAsianLangsUnicodeRangeTable) {
 				out = strings.ToUpper(out[:1]) + out[1:]
 			}
 			return
