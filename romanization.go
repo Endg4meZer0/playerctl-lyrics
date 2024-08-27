@@ -43,16 +43,24 @@ func Romanize(str string) (out string) {
 				out = strings.ToUpper(out[:1]) + out[1:]
 			}
 			return
+		} else {
+			out = str
 		}
-	} else if CurrentConfig.Output.Romanization.Chinese {
+	}
+
+	if CurrentConfig.Output.Romanization.Chinese {
 		out = zhCharToPinyin(str)
 		if out != str {
 			if !isChar(out[:3], supportedAsianLangsUnicodeRangeTable) {
 				out = strings.ToUpper(out[:1]) + out[1:]
 			}
 			return
+		} else {
+			out = str
 		}
-	} else if CurrentConfig.Output.Romanization.Korean {
+	}
+
+	if CurrentConfig.Output.Romanization.Korean {
 		r := kr.NewRomanizer(str)
 		out = r.Romanize()
 		if out != str {
@@ -60,6 +68,8 @@ func Romanize(str string) (out string) {
 				out = strings.ToUpper(out[:1]) + out[1:]
 			}
 			return
+		} else {
+			out = str
 		}
 	}
 
