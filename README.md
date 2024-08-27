@@ -5,9 +5,6 @@ This small thingie is primarily designed for bars like [waybar](https://github.c
 
 https://github.com/user-attachments/assets/209ddfdd-0c2a-4ce6-a213-b9796a154c28
 
-## Warning!
-The support for players that use seconds as position data like cmus is present and works good, but still can be unstable. It is recommended to use players that use milliseconds as position data. For example, Spotify works great.
-
 ## Build
 ```
 git clone https://github.com/Endg4meZer0/playerctl-lyrics.git
@@ -34,7 +31,8 @@ Get more info on on available options with `playerctl-lyrics -help` or on [wiki]
 - [ ] There is always more!
 
 ## Known issues
-- Spotify: if you leave songs on autoplay without using previous or next buttons, lyrics may desync a lot. It's an internal issue of Spotify's position data desyncing from the song's actual position and is not related to playerctl-lyrics. This sometimes gets fixed by itself during the playback, but it can also be fixed manually by pausing playback and continuing it again or seeking to anywhere on the position bar.
+- Players like cmus that report pure seconds as position data to MPRIS may desync for about 0.5s after seeking a new position of the same song. I'm still looking into how to make it work better, but at least the usual playback works pretty much OK.
+- Spotify: if you leave songs on autoplay without using previous or next buttons, lyrics may desync a lot. It's an internal issue of Spotify's reported position data desyncing from the song's actual position and is not related to playerctl-lyrics. This sometimes gets fixed by itself during the playback, but it can also be fixed manually by pausing playback and continuing it again or seeking to anywhere on the position bar.
 
 ## Not a known issue or you have an enhancement suggestion?
 Please, make an issue so I can fix it, suggest a workaround or add a new feature!
