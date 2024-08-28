@@ -21,10 +21,16 @@ func GetSongData() SongData {
 	output, _ := cmd.CombinedOutput()
 
 	soutput := strings.Split(string(output), "\n")
+
+	if len(soutput) != 4 {
+		return SongData{Song: "", Artist: "", Album: "", LyricsType: 4}
+	}
+
 	song := soutput[0]
 	artist := soutput[1]
 	album := soutput[2]
 	durationStr := soutput[3]
+
 	if song == "" || durationStr == "" {
 		return SongData{Song: "", Artist: "", Album: "", LyricsType: 4}
 	}
