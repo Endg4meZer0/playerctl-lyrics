@@ -22,7 +22,7 @@ func GetSongData() SongData {
 
 	soutput := strings.Split(string(output), "\n")
 
-	if len(soutput) != 4 {
+	if len(soutput) != 5 {
 		return SongData{Song: "", Artist: "", Album: "", LyricsType: 4}
 	}
 
