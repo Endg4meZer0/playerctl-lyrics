@@ -49,9 +49,10 @@ type RomanizationConfig struct {
 }
 
 type InstrumentalConfig struct {
-	Interval float64 `json:"interval"`
-	Symbol   string  `json:"symbol"`
-	MaxCount uint    `json:"maxCount"`
+	MatchSongBPM bool    `json:"matchSongBPM"`
+	Interval     float64 `json:"interval"`
+	Symbol       string  `json:"symbol"`
+	MaxCount     uint    `json:"maxCount"`
 }
 
 var CurrentConfig Config
@@ -131,9 +132,10 @@ func DefaultConfig() Config {
 				Korean:   false,
 			},
 			Instrumental: InstrumentalConfig{
-				Interval: 0.5,
-				Symbol:   "♪",
-				MaxCount: 3,
+				MatchSongBPM: true,
+				Interval:     0.5,
+				Symbol:       "♪",
+				MaxCount:     3,
 			},
 		},
 	}
