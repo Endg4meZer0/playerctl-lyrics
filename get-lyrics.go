@@ -14,72 +14,84 @@ import (
 
 // Sets the Lyrics and LyricTimestamps properties in SongData object.
 func GetSyncedLyrics(song *SongData) {
-	var foundSong LrcLibJson
-	cachedLyrics, isNotExpired := GetCachedLyrics(song)
-	if cachedLyrics == "" || !isNotExpired {
-		lrclibURL := makeURLGet(song)
-
-		foundSongs, found := sendRequest(lrclibURL)
-
-		if !found {
-			lrclibURL = makeURLSearchWithAlbum(song)
-			foundSongs, found = sendRequest(lrclibURL)
-			if !found {
-				lrclibURL = makeURLSearch(song)
-				foundSongs, found = sendRequest(lrclibURL)
+	if CurrentConfig.Cache.Enabled {
+		cachedData, isNotExpired := GetCachedLyrics(song)
+		if isNotExpired && !(len(cachedData.Lyrics) == 0 && !cachedData.Instrumental) {
+			song.LyricTimestamps = cachedData.LyricTimestamps
+			song.Lyrics = cachedData.Lyrics
+			if cachedData.Instrumental {
+				song.LyricsType = 2
+			} else {
+				song.LyricsType = 0
 			}
-		}
-
-		if !found {
-			song.LyricsType = 3
 			return
 		}
-
-		foundSong = foundSongs[0]
-
-		if foundSong.Instrumental {
-			song.LyricsType = 2
-			return
-		}
-
-		if foundSong.PlainLyrics != "" && foundSong.SyncedLyrics == "" {
-			song.LyricsType = 1
-			return
-		}
-
-		if CurrentConfig.Cache.Enabled {
-			if err := StoreCachedLyrics(*song, foundSong.SyncedLyrics); err != nil {
-				log.Println("Could not save the lyrics to the cache! Are there writing perms?")
-			}
-		}
-	} else {
-		foundSong.SyncedLyrics = cachedLyrics
 	}
 
-	song.LyricsType = 0
+	lrclibURL := makeURLGet(song)
+
+	foundSongs, found := sendRequest(lrclibURL)
+
+	if !found {
+		lrclibURL = makeURLSearchWithAlbum(song)
+		foundSongs, found = sendRequest(lrclibURL)
+		if !found {
+			lrclibURL = makeURLSearch(song)
+			foundSongs, found = sendRequest(lrclibURL)
+		}
+	}
+
+	if !found {
+		song.LyricsType = 3
+		return
+	}
+
+	foundSong := foundSongs[0]
 
 	resultLyrics := []string{}
 	resultTimestamps := []float64{}
 
-	syncedLyrics := strings.Split(foundSong.SyncedLyrics, "\n")
-	for _, lyric := range syncedLyrics {
-		lyricParts := strings.SplitN(lyric, " ", 2)
-		timecode := timecodeStrToFloat(lyricParts[0])
-		if timecode == -1 {
-			continue
+	if foundSong.Instrumental {
+		song.LyricsType = 2
+	} else if foundSong.PlainLyrics != "" && foundSong.SyncedLyrics == "" {
+		song.LyricsType = 1
+	} else {
+		song.LyricsType = 0
+
+		syncedLyrics := strings.Split(foundSong.SyncedLyrics, "\n")
+		for _, lyric := range syncedLyrics {
+			lyricParts := strings.SplitN(lyric, " ", 2)
+			timecode := timecodeStrToFloat(lyricParts[0])
+			if timecode == -1 {
+				continue
+			}
+			var lyricStr string
+			if len(lyricParts) != 1 {
+				lyricStr = lyricParts[1]
+			} else {
+				lyricStr = ""
+			}
+			resultLyrics = append(resultLyrics, lyricStr)
+			resultTimestamps = append(resultTimestamps, timecode)
 		}
-		var lyricStr string
-		if len(lyricParts) != 1 {
-			lyricStr = lyricParts[1]
-		} else {
-			lyricStr = ""
-		}
-		resultLyrics = append(resultLyrics, lyricStr)
-		resultTimestamps = append(resultTimestamps, timecode)
+
+		song.Lyrics = resultLyrics
+		song.LyricTimestamps = resultTimestamps
 	}
 
-	song.Lyrics = resultLyrics
-	song.LyricTimestamps = resultTimestamps
+	if CurrentConfig.Cache.Enabled && song.LyricsType != 1 {
+		var dataToBeCached Cache = Cache{
+			LyricTimestamps: resultTimestamps,
+			Lyrics:          resultLyrics,
+			Instrumental:    false,
+		}
+		if song.LyricsType == 2 {
+			dataToBeCached.Instrumental = true
+		}
+		if err := StoreCachedLyrics(*song, dataToBeCached); err != nil {
+			log.Println("Could not save the lyrics to the cache! Are there writing perms?")
+		}
+	}
 }
 
 func timecodeStrToFloat(timecode string) float64 {

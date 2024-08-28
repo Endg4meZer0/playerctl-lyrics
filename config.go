@@ -8,47 +8,47 @@ import (
 // LEVEL 0
 
 type Config struct {
-	Playerctl Playerctl `json:"playerctl"`
-	Cache     Cache     `json:"cache"`
-	Output    Output    `json:"output"`
+	Playerctl PlayerctlConfig `json:"playerctl"`
+	Cache     CacheConfig     `json:"cache"`
+	Output    OutputConfig    `json:"output"`
 }
 
 // LEVEL 1
 
-type Playerctl struct {
+type PlayerctlConfig struct {
 	IncludedPlayers            []string `json:"includedPlayers"`
 	ExcludedPlayers            []string `json:"excludedPlayers"`
 	PlayerctlSongCheckInterval float64  `json:"playerctlMetadataCheckInterval"`
 }
 
-type Cache struct {
+type CacheConfig struct {
 	Enabled       bool   `json:"enabled"`
 	CacheDir      string `json:"cacheDir"`
 	CacheLifeSpan uint   `json:"cacheLifeSpan"`
 }
 
-type Output struct {
-	TimestampOffset                         int64        `json:"timestampOffset"`
-	TerminalOutputInOneLine                 bool         `json:"terminalOutputInOneLine"`
-	ShowSongNotFoundWarning                 bool         `json:"showSongNotFoundWarning"`
-	ShowNotSyncedLyricsWarning              bool         `json:"showNotSyncedLyricsWarning"`
-	ShowGettingLyricsMessage                bool         `json:"showGettingLyricsMessage"`
-	ShowRepeatedLyricsMultiplier            bool         `json:"showRepeatedLyricsMultiplier"`
-	RepeatedLyricsMultiplierFormat          string       `json:"repeatedLyricsMultiplierFormat"`
-	PrintRepeatedLyricsMultiplierToTheRight bool         `json:"printRepeatedLyricsMultiplierToTheRight"`
-	Romanization                            Romanization `json:"romanization"`
-	Instrumental                            Instrumental `json:"instrumental"`
+type OutputConfig struct {
+	TimestampOffset                         int64              `json:"timestampOffset"`
+	TerminalOutputInOneLine                 bool               `json:"terminalOutputInOneLine"`
+	ShowSongNotFoundWarning                 bool               `json:"showSongNotFoundWarning"`
+	ShowNotSyncedLyricsWarning              bool               `json:"showNotSyncedLyricsWarning"`
+	ShowGettingLyricsMessage                bool               `json:"showGettingLyricsMessage"`
+	ShowRepeatedLyricsMultiplier            bool               `json:"showRepeatedLyricsMultiplier"`
+	RepeatedLyricsMultiplierFormat          string             `json:"repeatedLyricsMultiplierFormat"`
+	PrintRepeatedLyricsMultiplierToTheRight bool               `json:"printRepeatedLyricsMultiplierToTheRight"`
+	Romanization                            RomanizationConfig `json:"romanization"`
+	Instrumental                            InstrumentalConfig `json:"instrumental"`
 }
 
 // LEVEL 2
 
-type Romanization struct {
+type RomanizationConfig struct {
 	Japanese bool `json:"japanese"`
 	Chinese  bool `json:"chinese"`
 	Korean   bool `json:"korean"`
 }
 
-type Instrumental struct {
+type InstrumentalConfig struct {
 	Interval float64 `json:"interval"`
 	Symbol   string  `json:"symbol"`
 	MaxCount uint    `json:"maxCount"`
@@ -106,17 +106,17 @@ func ReadConfigFromDefaultPath() error {
 
 func DefaultConfig() Config {
 	return Config{
-		Playerctl: Playerctl{
+		Playerctl: PlayerctlConfig{
 			IncludedPlayers:            []string{},
 			ExcludedPlayers:            []string{},
 			PlayerctlSongCheckInterval: 0.5,
 		},
-		Cache: Cache{
+		Cache: CacheConfig{
 			Enabled:       true,
 			CacheDir:      "$XDG_CACHE_DIR/playerctl-lyrics",
 			CacheLifeSpan: 14,
 		},
-		Output: Output{
+		Output: OutputConfig{
 			TimestampOffset:                         0,
 			TerminalOutputInOneLine:                 false,
 			ShowSongNotFoundWarning:                 true,
@@ -125,12 +125,12 @@ func DefaultConfig() Config {
 			ShowRepeatedLyricsMultiplier:            true,
 			RepeatedLyricsMultiplierFormat:          "(x%v)",
 			PrintRepeatedLyricsMultiplierToTheRight: true,
-			Romanization: Romanization{
+			Romanization: RomanizationConfig{
 				Japanese: false,
 				Chinese:  false,
 				Korean:   false,
 			},
-			Instrumental: Instrumental{
+			Instrumental: InstrumentalConfig{
 				Interval: 0.5,
 				Symbol:   "♪",
 				MaxCount: 3,
@@ -139,6 +139,6 @@ func DefaultConfig() Config {
 	}
 }
 
-func (r *Romanization) IsEnabled() bool {
+func (r *RomanizationConfig) IsEnabled() bool {
 	return r.Japanese || r.Chinese || r.Korean
 }

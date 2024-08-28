@@ -1,7 +1,9 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
+	"log"
 	"math"
 	"os"
 	"regexp"
@@ -11,7 +13,16 @@ import (
 
 var badCharactersRegexp = regexp.MustCompile(`[:;|\/\\<>\.]+`)
 
-func GetCachedLyrics(song *SongData) (string, bool) {
+type Cache struct {
+	LyricTimestamps []float64 `json:"lyricTimestamps"`
+	Lyrics          []string  `json:"lyrics"`
+	Instrumental    bool      `json:"instrumental"`
+}
+
+func GetCachedLyrics(song *SongData) (Cache, bool) {
+	if !CurrentConfig.Cache.Enabled {
+		return Cache{}, true
+	}
 	cacheDirectory := CurrentConfig.Cache.CacheDir
 	if strings.Contains(cacheDirectory, "$XDG_CACHE_DIR") && os.Getenv("$XDG_CACHE_DIR") == "" {
 		cacheDirectory = strings.ReplaceAll(cacheDirectory, "$XDG_CACHE_DIR", "$HOME/.cache")
@@ -20,21 +31,28 @@ func GetCachedLyrics(song *SongData) (string, bool) {
 	cacheDirectory = os.ExpandEnv(cacheDirectory)
 
 	filename := getFilename(song.Song, song.Artist, song.Album, song.Duration)
-	fullPath := cacheDirectory + "/" + filename + ".lrc"
+	fullPath := cacheDirectory + "/" + filename + ".json"
 
 	if file, err := os.ReadFile(fullPath); err == nil {
-		if CurrentConfig.Cache.Enabled && CurrentConfig.Cache.CacheLifeSpan != 0 {
+		var cachedData Cache
+		err = json.Unmarshal(file, &cachedData)
+		if err != nil {
+			log.Println(err)
+			return Cache{}, false
+		}
+
+		if CurrentConfig.Cache.CacheLifeSpan != 0 {
 			cacheStats, _ := os.Lstat(fullPath)
-			return string(file), time.Since(cacheStats.ModTime()).Hours() <= float64(CurrentConfig.Cache.CacheLifeSpan)*24
+			return cachedData, time.Since(cacheStats.ModTime()).Hours() <= float64(CurrentConfig.Cache.CacheLifeSpan)*24
 		} else {
-			return string(file), true
+			return cachedData, true
 		}
 	} else {
-		return "", false
+		return Cache{}, false
 	}
 }
 
-func StoreCachedLyrics(song SongData, lrcData string) error {
+func StoreCachedLyrics(song SongData, data Cache) error {
 	cacheDirectory := CurrentConfig.Cache.CacheDir
 	if strings.Contains(cacheDirectory, "$XDG_CACHE_DIR") && os.Getenv("$XDG_CACHE_DIR") == "" {
 		cacheDirectory = strings.ReplaceAll(cacheDirectory, "$XDG_CACHE_DIR", "$HOME/.cache")
@@ -48,9 +66,14 @@ func StoreCachedLyrics(song SongData, lrcData string) error {
 	}
 
 	filename := getFilename(song.Song, song.Artist, song.Album, song.Duration)
-	fullPath := cacheDirectory + "/" + filename + ".lrc"
+	fullPath := cacheDirectory + "/" + filename + ".json"
 
-	if err := os.WriteFile(fullPath, []byte(lrcData), 0777); err != nil {
+	encodedData, err := json.Marshal(data)
+	if err != nil {
+		return err
+	}
+
+	if err := os.WriteFile(fullPath, []byte(encodedData), 0777); err != nil {
 		return err
 	}
 	return nil
