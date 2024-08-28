@@ -109,6 +109,12 @@ func SyncLoop() {
 				}
 			}
 
+			if CurrentConfig.Output.TimestampOffset != 0 {
+				for i, timestamp := range currentSong.LyricTimestamps {
+					currentSong.LyricTimestamps[i] = timestamp + (float64(CurrentConfig.Output.TimestampOffset) / 1000)
+				}
+			}
+
 			timeAfterGettingLyrics := time.Now()
 			position += math.Max(timeAfterGettingLyrics.Sub(timeBeforeGettingLyrics).Seconds(), 0) + 0.1 // tests have shown that additional 0.1 is required to look good
 
