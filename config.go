@@ -28,6 +28,7 @@ type Cache struct {
 }
 
 type Output struct {
+	TimestampOffset                         int64        `json:"timestampOffset"`
 	TerminalOutputInOneLine                 bool         `json:"terminalOutputInOneLine"`
 	ShowSongNotFoundWarning                 bool         `json:"showSongNotFoundWarning"`
 	ShowNotSyncedLyricsWarning              bool         `json:"showNotSyncedLyricsWarning"`
@@ -116,6 +117,7 @@ func DefaultConfig() Config {
 			CacheLifeSpan: 14,
 		},
 		Output: Output{
+			TimestampOffset:                         0,
 			TerminalOutputInOneLine:                 false,
 			ShowSongNotFoundWarning:                 true,
 			ShowNotSyncedLyricsWarning:              true,
