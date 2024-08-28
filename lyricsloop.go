@@ -11,6 +11,7 @@ var lyricsTimer = time.NewTimer(5 * time.Minute)
 var instrTimer = time.NewTimer(5 * time.Minute)
 var currentSong = SongData{LyricsType: 5}
 var currentPosition = 0.0
+var writtenTimestamp = 0.0
 
 func UpdateData(newSong SongData) {
 	currentSong = newSong
@@ -19,7 +20,6 @@ func UpdateData(newSong SongData) {
 func UpdatePosition(newPosition float64) {
 	currentPosition = newPosition
 	lyricsTimer.Reset(1)
-	instrTimer.Stop()
 }
 
 func WriteLyrics() {
@@ -61,7 +61,8 @@ func WriteLyrics() {
 				// then reset an instrumental ticker until the first lyric shows up
 				if currentLyricTimestamp == -1 {
 					instrTimer.Reset(1)
-				} else if isPlaying { // If paused then don't print the lyric and instead try once more time later
+				} else if isPlaying && writtenTimestamp != currentLyricTimestamp { // If paused then don't print the lyric and instead try once more time later
+					writtenTimestamp = currentLyricTimestamp
 					if lyric == "" {
 						// An empty lyric basically means instrumental part,
 						// so we reset the instrumental ticker and moving on

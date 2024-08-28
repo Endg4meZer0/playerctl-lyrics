@@ -10,7 +10,7 @@ func SyncLoop() {
 	var currentSong SongData
 
 	checkerTicker := time.NewTicker(time.Duration(CurrentConfig.Playerctl.PlayerctlSongCheckInterval*1000) * time.Millisecond)
-	positionCheckTicker := time.NewTicker(time.Second)
+	positionCheckTicker := time.NewTimer(time.Second)
 	positionInnerCheckTicker := time.NewTicker(time.Second)
 	positionInnerCheckTicker.Stop()
 
@@ -65,19 +65,18 @@ func SyncLoop() {
 			_, initialPosition := GetPlayerData()
 			requiredTicks := 10
 			positionInnerCheckTicker.Reset(100 * time.Millisecond)
-			go func() {
-				for i := 0; i < requiredTicks; i++ {
-					<-positionInnerCheckTicker.C
-					isStillPlaying, newPosition := GetPlayerData()
-					diff := newPosition - (initialPosition + 0.1*(float64(i)+1))
-					if !(diff <= 0.15 && isStillPlaying) { // 0.05 is an okay delta
-						fmt.Println(newPosition, initialPosition, initialPosition+0.1*(float64(i)+1), diff)
-						UpdatePosition(newPosition)
-						positionCheckTicker.Reset(time.Second)
-						break
-					}
+			for i := 0; i < requiredTicks; i++ {
+				<-positionInnerCheckTicker.C
+				isStillPlaying, newPosition := GetPlayerData()
+				expectedPosition := (initialPosition + 0.1*(float64(i)+1))
+				diff := newPosition - expectedPosition
+				if !(((diff <= 0.21 && diff >= -1.11) || (diff >= 0.89 && diff <= 1.01)) || !isStillPlaying) {
+					UpdatePosition(newPosition)
+					break
 				}
-			}()
+			}
+			positionInnerCheckTicker.Stop()
+			positionCheckTicker.Reset(1)
 		}
 	}()
 
