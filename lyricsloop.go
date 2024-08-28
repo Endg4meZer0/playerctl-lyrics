@@ -12,6 +12,7 @@ var instrTimer = time.NewTimer(5 * time.Minute)
 var currentSong = SongData{LyricsType: 5}
 var currentPosition = 0.0
 var writtenTimestamp = 0.0
+var instrumentalLyric = false
 
 func UpdateData(newSong SongData) {
 	currentSong = newSong
@@ -30,6 +31,7 @@ func WriteLyrics() {
 				instrTimer.Stop()
 				fmt.Println()
 			} else if currentSong.LyricsType >= 2 {
+				instrumentalLyric = true
 				instrTimer.Reset(1)
 			} else {
 				isPlaying, currentPlayerPosition := GetPlayerData()
@@ -60,18 +62,21 @@ func WriteLyrics() {
 				// If the currentLyricTimestamp remained at -1.0
 				// then reset an instrumental ticker until the first lyric shows up
 				if currentLyricTimestamp == -1 {
+					instrumentalLyric = true
 					instrTimer.Reset(1)
 				} else if isPlaying && writtenTimestamp != currentLyricTimestamp { // If paused then don't print the lyric and instead try once more time later
 					writtenTimestamp = currentLyricTimestamp
 					if lyric == "" {
 						// An empty lyric basically means instrumental part,
 						// so we reset the instrumental ticker and moving on
+						instrumentalLyric = true
 						instrTimer.Reset(1)
 					} else {
 						// An actual lyric when all the conditions are met needs to
 						// 1) stop instrumental ticker
 						// 2) print itself
 						// 3) call the next writing goroutine
+						instrumentalLyric = false
 						instrTimer.Stop()
 						PrintLyric(lyric)
 					}
@@ -92,6 +97,9 @@ func WriteInstrumental() {
 	instrTimer.Reset(time.Duration(CurrentConfig.Output.Instrumental.Interval*1000) * time.Millisecond)
 	for {
 		<-instrTimer.C
+		if !instrumentalLyric {
+			continue
+		}
 		// Not playing? Don't change anything, or it will look kinda strange
 		if isPlaying, _ := GetPlayerData(); isPlaying {
 			switch currentSong.LyricsType {
