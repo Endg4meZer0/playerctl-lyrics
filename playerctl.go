@@ -23,7 +23,7 @@ func GetSongData() SongData {
 	soutput := strings.Split(string(output), "\n")
 
 	if len(soutput) != 5 {
-		return SongData{Song: "", Artist: "", Album: "", LyricsType: 4}
+		return SongData{Song: "", Artist: "", Album: "", LyricsType: 4, BPM: 0}
 	}
 
 	song := soutput[0]
@@ -32,7 +32,7 @@ func GetSongData() SongData {
 	durationStr := soutput[3]
 
 	if song == "" || durationStr == "" {
-		return SongData{Song: "", Artist: "", Album: "", LyricsType: 4}
+		return SongData{Song: "", Artist: "", Album: "", LyricsType: 4, BPM: 0}
 	}
 
 	var duration float64
@@ -43,7 +43,7 @@ func GetSongData() SongData {
 		duration = duration2 / 1000000
 	}
 
-	return SongData{Song: song, Artist: artist, Album: album, Duration: duration, LyricsType: 5}
+	return SongData{Song: song, Artist: artist, Album: album, Duration: duration, LyricsType: 5, BPM: 0}
 }
 
 // Get the player's status and position

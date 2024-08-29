@@ -55,8 +55,6 @@ type InstrumentalConfig struct {
 	MaxCount     uint    `json:"maxCount"`
 }
 
-var CurrentConfig Config
-
 func ReadConfig(path string) error {
 	configFile, err := os.ReadFile(os.ExpandEnv(path))
 	if err != nil {
@@ -135,7 +133,7 @@ func DefaultConfig() Config {
 				MatchSongBPM: true,
 				Interval:     0.5,
 				Symbol:       "♪",
-				MaxCount:     3,
+				MaxCount:     4,
 			},
 		},
 	}

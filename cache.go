@@ -17,6 +17,7 @@ type Cache struct {
 	LyricTimestamps []float64 `json:"lyricTimestamps"`
 	Lyrics          []string  `json:"lyrics"`
 	Instrumental    bool      `json:"instrumental"`
+	BPM             float64   `json:"bpm"`
 }
 
 func GetCachedLyrics(song *SongData) (Cache, bool) {
