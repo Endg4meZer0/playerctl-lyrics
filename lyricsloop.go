@@ -97,11 +97,11 @@ func WriteInstrumental() {
 	instrTimer.Reset(time.Duration(CurrentConfig.Output.Instrumental.Interval*1000) * time.Millisecond)
 	for {
 		<-instrTimer.C
-		if !instrumentalLyric {
-			continue
-		}
 		// Not playing? Don't change anything, or it will look kinda strange
 		if isPlaying, _ := GetPlayerData(); isPlaying {
+			if !instrumentalLyric {
+				continue
+			}
 			switch currentSong.LyricsType {
 			case 1:
 				if CurrentConfig.Output.ShowNotSyncedLyricsWarning {

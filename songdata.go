@@ -59,7 +59,11 @@ func GetSyncedLyrics(song *SongData) {
 		song.LyricsType = 0
 
 		syncedLyrics := strings.Split(foundSong.SyncedLyrics, "\n")
-		for _, lyric := range syncedLyrics {
+
+		resultLyrics = make([]string, len(syncedLyrics))
+		resultTimestamps = make([]float64, len(syncedLyrics))
+
+		for i, lyric := range syncedLyrics {
 			lyricParts := strings.SplitN(lyric, " ", 2)
 			timecode := timecodeStrToFloat(lyricParts[0])
 			if timecode == -1 {
@@ -71,8 +75,8 @@ func GetSyncedLyrics(song *SongData) {
 			} else {
 				lyricStr = ""
 			}
-			resultLyrics = append(resultLyrics, lyricStr)
-			resultTimestamps = append(resultTimestamps, timecode)
+			resultLyrics[i] = lyricStr
+			resultTimestamps[i] = timecode
 		}
 
 		song.Lyrics = resultLyrics
