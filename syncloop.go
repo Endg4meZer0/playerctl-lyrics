@@ -70,7 +70,7 @@ func SyncLoop() {
 				isStillPlaying, newPosition := GetPlayerData()
 				expectedPosition := (initialPosition + 0.1*(float64(i)+1))
 				diff := newPosition - expectedPosition
-				if !(((diff <= 0.21 && diff >= -1.11) || (diff >= 0.89 && diff <= 1.01)) || !isStillPlaying) {
+				if !(((diff <= 0.21 && diff >= -1.11) || (diff >= 0.89 && diff <= 1.01)) || (!isStillPlaying && i >= 9)) {
 					UpdatePosition(newPosition)
 					break
 				}
