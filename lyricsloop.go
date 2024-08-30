@@ -9,14 +9,9 @@ import (
 
 var lyricsTimer = time.NewTimer(5 * time.Minute)
 var instrTimer = time.NewTimer(5 * time.Minute)
-var currentSong = SongData{LyricsType: 5}
 var currentPosition = 0.0
 var writtenTimestamp = 0.0
 var instrumentalLyric = false
-
-func UpdateData(newSong SongData) {
-	currentSong = newSong
-}
 
 func UpdatePosition(newPosition float64) {
 	currentPosition = newPosition
@@ -27,10 +22,10 @@ func WriteLyrics() {
 	go func() {
 		for {
 			<-lyricsTimer.C
-			if currentSong.LyricsType == 4 {
+			if CurrentSong.LyricsType == 4 {
 				instrTimer.Stop()
 				fmt.Println()
-			} else if currentSong.LyricsType >= 2 {
+			} else if CurrentSong.LyricsType >= 2 {
 				instrumentalLyric = true
 				instrTimer.Reset(1)
 			} else {
@@ -45,16 +40,16 @@ func WriteLyrics() {
 				lyric := ""
 				timestampIndex := -1
 
-				for i, timestamp := range currentSong.LyricTimestamps {
+				for i, timestamp := range CurrentSong.LyricTimestamps {
 					if timestamp <= currentPosition && currentLyricTimestamp <= timestamp {
 						currentLyricTimestamp = timestamp
-						lyric = currentSong.Lyrics[i]
+						lyric = CurrentSong.Lyrics[i]
 						timestampIndex = i
 					}
 				}
 
-				if timestampIndex != len(currentSong.LyricTimestamps)-1 {
-					nextLyricTimestamp = currentSong.LyricTimestamps[timestampIndex+1]
+				if timestampIndex != len(CurrentSong.LyricTimestamps)-1 {
+					nextLyricTimestamp = CurrentSong.LyricTimestamps[timestampIndex+1]
 				}
 
 				lyricsTimerDuration := time.Duration(int64(math.Abs(nextLyricTimestamp-currentPosition-0.01)*1000)) * time.Millisecond // tests have shown that it slows down and mismatches without additional 0.01 offset
@@ -102,7 +97,7 @@ func WriteInstrumental() {
 			if !instrumentalLyric {
 				continue
 			}
-			switch currentSong.LyricsType {
+			switch CurrentSong.LyricsType {
 			case 1:
 				if CurrentConfig.Output.ShowNotSyncedLyricsWarning {
 					PrintLyric("This song's lyrics are not synced on LrcLib! " + strings.Repeat(note, i%j))

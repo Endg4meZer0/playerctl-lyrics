@@ -54,8 +54,6 @@ type InstrumentalConfig struct {
 	MaxCount uint    `json:"maxCount"`
 }
 
-var CurrentConfig Config
-
 func ReadConfig(path string) error {
 	configFile, err := os.ReadFile(os.ExpandEnv(path))
 	if err != nil {
