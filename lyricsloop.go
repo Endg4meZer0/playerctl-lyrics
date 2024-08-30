@@ -86,35 +86,38 @@ func WriteLyrics() {
 // instrTimer.Stop to stop writing instrumental
 // instrTimer.Reset to continue again
 func WriteInstrumental() {
-	note := CurrentConfig.Output.Instrumental.Symbol
 	i := 1
-	j := int(CurrentConfig.Output.Instrumental.MaxCount + 1)
 	instrTimer.Reset(time.Duration(CurrentConfig.Output.Instrumental.Interval*1000) * time.Millisecond)
 	for {
 		<-instrTimer.C
+		note := CurrentConfig.Output.Instrumental.Symbol
+		j := int(CurrentConfig.Output.Instrumental.MaxCount + 1)
 		// Not playing? Don't change anything, or it will look kinda strange
 		if isPlaying, _ := GetPlayerData(); isPlaying {
 			if !instrumentalLyric {
 				continue
 			}
+			stringToPrint := ""
 			switch CurrentSong.LyricsType {
 			case 1:
 				if CurrentConfig.Output.ShowNotSyncedLyricsWarning {
-					PrintLyric("This song's lyrics are not synced on LrcLib! " + strings.Repeat(note, i%j))
+					stringToPrint += "This song's lyrics are not synced on LrcLib! "
 				}
 			case 3:
 				if CurrentConfig.Output.ShowSongNotFoundWarning {
-					PrintLyric("Current song was not found on LrcLib! " + strings.Repeat(note, i%j))
+					stringToPrint += "Current song was not found on LrcLib! "
 				}
 			case 5:
 				if CurrentConfig.Output.ShowGettingLyricsMessage {
-					PrintLyric("Getting lyrics... " + strings.Repeat(note, i%j))
+					stringToPrint += "Getting lyrics... "
 				}
 			case 6:
-				PrintLyric("Failed to get lyrics! " + strings.Repeat(note, i%j))
-			default:
-				PrintLyric(strings.Repeat(note, i%j))
+				stringToPrint += "Failed to get lyrics! "
 			}
+
+			stringToPrint += strings.Repeat(note, i%j)
+
+			PrintLyric(stringToPrint)
 
 			i++
 			// Don't want to cause any overflow here
