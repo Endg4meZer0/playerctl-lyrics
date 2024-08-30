@@ -67,7 +67,7 @@ func getSpotifyAccessToken() {
 		return
 	}
 
-	req.Header.Set("Authorization", "Basic "+base64.StdEncoding.EncodeToString([]byte("4dbb278814c34f5a94870323fd5cfdb1:5ba2333a30174dcca3183b83aea18255")))
+	req.Header.Set("Authorization", "Basic "+base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf("%v:%v", CurrentConfig.Spotify.ClientId, CurrentConfig.Spotify.ClientSecret))))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
 	resp, err := client.Do(req)

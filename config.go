@@ -11,6 +11,7 @@ type Config struct {
 	Playerctl PlayerctlConfig `json:"playerctl"`
 	Cache     CacheConfig     `json:"cache"`
 	Output    OutputConfig    `json:"output"`
+	Spotify   SpotifyConfig   `json:"spotify"`
 }
 
 // LEVEL 1
@@ -38,6 +39,11 @@ type OutputConfig struct {
 	PrintRepeatedLyricsMultiplierToTheRight bool               `json:"printRepeatedLyricsMultiplierToTheRight"`
 	Romanization                            RomanizationConfig `json:"romanization"`
 	Instrumental                            InstrumentalConfig `json:"instrumental"`
+}
+
+type SpotifyConfig struct {
+	ClientId     string `json:"clientId"`
+	ClientSecret string `json:"clientSecret"`
 }
 
 // LEVEL 2
@@ -135,6 +141,10 @@ func DefaultConfig() Config {
 				Symbol:       "♪",
 				MaxCount:     4,
 			},
+		},
+		Spotify: SpotifyConfig{
+			ClientId:     "",
+			ClientSecret: "",
 		},
 	}
 }
