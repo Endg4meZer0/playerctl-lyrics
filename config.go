@@ -11,6 +11,7 @@ type Config struct {
 	Playerctl PlayerctlConfig `json:"playerctl"`
 	Cache     CacheConfig     `json:"cache"`
 	Output    OutputConfig    `json:"output"`
+	Spotify   SpotifyConfig   `json:"spotify"`
 }
 
 // LEVEL 1
@@ -40,6 +41,11 @@ type OutputConfig struct {
 	Instrumental                            InstrumentalConfig `json:"instrumental"`
 }
 
+type SpotifyConfig struct {
+	ClientId     string `json:"clientId"`
+	ClientSecret string `json:"clientSecret"`
+}
+
 // LEVEL 2
 
 type RomanizationConfig struct {
@@ -54,8 +60,6 @@ type InstrumentalConfig struct {
 	Symbol       string  `json:"symbol"`
 	MaxCount     uint    `json:"maxCount"`
 }
-
-var CurrentConfig Config
 
 func ReadConfig(path string) error {
 	configFile, err := os.ReadFile(os.ExpandEnv(path))
@@ -135,8 +139,12 @@ func DefaultConfig() Config {
 				MatchSongBPM: true,
 				Interval:     0.5,
 				Symbol:       "♪",
-				MaxCount:     3,
+				MaxCount:     4,
 			},
+		},
+		Spotify: SpotifyConfig{
+			ClientId:     "",
+			ClientSecret: "",
 		},
 	}
 }

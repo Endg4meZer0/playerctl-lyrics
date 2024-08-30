@@ -19,6 +19,7 @@ func GetSyncedLyrics(song *SongData) {
 		if isNotExpired && !(len(cachedData.Lyrics) == 0 && !cachedData.Instrumental) {
 			song.LyricTimestamps = cachedData.LyricTimestamps
 			song.Lyrics = cachedData.Lyrics
+			song.BPM = cachedData.BPM
 			if cachedData.Instrumental {
 				song.LyricsType = 2
 			} else {
@@ -48,9 +49,6 @@ func GetSyncedLyrics(song *SongData) {
 
 	foundSong := foundSongs[0]
 
-	resultLyrics := []string{}
-	resultTimestamps := []float64{}
-
 	if foundSong.Instrumental {
 		song.LyricsType = 2
 	} else if foundSong.PlainLyrics != "" && foundSong.SyncedLyrics == "" {
@@ -60,10 +58,10 @@ func GetSyncedLyrics(song *SongData) {
 
 		syncedLyrics := strings.Split(foundSong.SyncedLyrics, "\n")
 
-		resultLyrics = make([]string, len(syncedLyrics))
-		resultTimestamps = make([]float64, len(syncedLyrics))
+		var resultLyrics []string
+		var resultTimestamps []float64
 
-		for i, lyric := range syncedLyrics {
+		for _, lyric := range syncedLyrics {
 			lyricParts := strings.SplitN(lyric, " ", 2)
 			timecode := timecodeStrToFloat(lyricParts[0])
 			if timecode == -1 {
@@ -75,19 +73,24 @@ func GetSyncedLyrics(song *SongData) {
 			} else {
 				lyricStr = ""
 			}
-			resultLyrics[i] = lyricStr
-			resultTimestamps[i] = timecode
+			resultLyrics = append(resultLyrics, lyricStr)
+			resultTimestamps = append(resultTimestamps, timecode)
 		}
 
 		song.Lyrics = resultLyrics
 		song.LyricTimestamps = resultTimestamps
 	}
 
+	if CurrentConfig.Output.Instrumental.MatchSongBPM {
+		GetSongBPM(song)
+	}
+
 	if CurrentConfig.Cache.Enabled && song.LyricsType != 1 {
 		var dataToBeCached Cache = Cache{
-			LyricTimestamps: resultTimestamps,
-			Lyrics:          resultLyrics,
+			LyricTimestamps: song.LyricTimestamps,
+			Lyrics:          song.Lyrics,
 			Instrumental:    false,
+			BPM:             song.BPM,
 		}
 		if song.LyricsType == 2 {
 			dataToBeCached.Instrumental = true
@@ -141,15 +144,6 @@ func makeLyricsURLSearch(song *SongData) url.URL {
 	return *newURL
 }
 
-// Make a URL to lrclib.net/api/search only with necessary data (song name and artist name) to send a GET request to
-func makeBpmURLSearch(song *SongData) url.URL {
-	newURL, err := url.Parse("https://api.spotify.com/v1/search?q=" + url.PathEscape(strings.ReplaceAll(fmt.Sprintf("%v %v %v", song.Song, song.Artist, song.Album), " ", "+")) + "&type=track&=")
-	if err != nil {
-		log.Fatalln(err)
-	}
-	return *newURL
-}
-
 func sendLyricsRequest(link url.URL) []byte {
 	resp, err := http.Get(link.String())
 	if err != nil || resp.StatusCode != 200 {
@@ -179,8 +173,4 @@ func handleLyricsResponse(body []byte) ([]LrcLibJson, bool) {
 	} else {
 		return []LrcLibJson{foundSong}, true
 	}
-}
-
-func getSongBPM(song *SongData) float64 {
-
 }
