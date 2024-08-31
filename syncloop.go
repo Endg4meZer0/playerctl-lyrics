@@ -8,7 +8,7 @@ import (
 
 func SyncLoop() {
 	checkerTicker := time.NewTicker(time.Duration(CurrentConfig.Playerctl.PlayerctlSongCheckInterval*1000) * time.Millisecond)
-	positionCheckTicker := time.NewTimer(time.Second)
+	positionCheckTimer := time.NewTimer(time.Second)
 	positionInnerCheckTicker := time.NewTicker(time.Second)
 	positionInnerCheckTicker.Stop()
 
@@ -58,22 +58,39 @@ func SyncLoop() {
 	// For example, seeking on a position bar is counted as abnormal
 	go func() {
 		for {
-			<-positionCheckTicker.C
-			_, initialPosition := GetPlayerData()
-			requiredTicks := 10
-			positionInnerCheckTicker.Reset(100 * time.Millisecond)
-			for i := 0; i < requiredTicks; i++ {
-				<-positionInnerCheckTicker.C
-				isStillPlaying, newPosition := GetPlayerData()
-				expectedPosition := (initialPosition + 0.1*(float64(i)+1))
-				diff := newPosition - expectedPosition
-				if !(((diff <= 0.21 && diff >= -1.11) || (diff >= 0.89 && diff <= 1.01)) || (!isStillPlaying && i >= 9)) {
-					UpdatePosition(newPosition)
-					break
+			<-positionCheckTimer.C
+			var initialPosition float64
+			IsPlaying, initialPosition = GetPlayerData()
+			if IsPlaying {
+				if CurrentConfig.Global.DisableActiveSync {
+					positionInnerCheckTicker.Reset(time.Second)
+					<-positionInnerCheckTicker.C
+					var newPosition float64
+					IsPlaying, newPosition = GetPlayerData()
+					diff := newPosition - initialPosition
+					if !(diff >= 0.9 && diff <= 1.1) {
+						UpdatePosition(newPosition)
+					}
+				} else {
+					requiredTicks := 10
+					positionInnerCheckTicker.Reset(100 * time.Millisecond)
+					for i := 0; i < requiredTicks; i++ {
+						<-positionInnerCheckTicker.C
+						var newPosition float64
+						IsPlaying, newPosition = GetPlayerData()
+						expectedPosition := (initialPosition + 0.1*(float64(i)+1))
+						diff := newPosition - expectedPosition
+						if !(((diff <= 0.21 && diff >= -1.11) || (diff >= 0.89 && diff <= 1.01)) || !IsPlaying) {
+							UpdatePosition(newPosition)
+							break
+						}
+					}
 				}
+				positionInnerCheckTicker.Stop()
+				positionCheckTimer.Reset(1)
+			} else {
+				positionCheckTimer.Reset(time.Second)
 			}
-			positionInnerCheckTicker.Stop()
-			positionCheckTicker.Reset(1)
 		}
 	}()
 

@@ -10,12 +10,17 @@ var currentConfigPath string
 // LEVEL 0
 
 type Config struct {
+	Global    GlobalConfig    `json:"global"`
 	Playerctl PlayerctlConfig `json:"playerctl"`
 	Cache     CacheConfig     `json:"cache"`
 	Output    OutputConfig    `json:"output"`
 }
 
 // LEVEL 1
+
+type GlobalConfig struct {
+	DisableActiveSync bool `json:"disableActiveSync"`
+}
 
 type PlayerctlConfig struct {
 	IncludedPlayers            []string `json:"includedPlayers"`
@@ -127,6 +132,9 @@ func (r *RomanizationConfig) IsEnabled() bool {
 }
 
 var defaultConfig = Config{
+	Global: GlobalConfig{
+		DisableActiveSync: false,
+	},
 	Playerctl: PlayerctlConfig{
 		IncludedPlayers:            []string{},
 		ExcludedPlayers:            []string{},
