@@ -26,15 +26,23 @@ func main() {
 
 	HandleFlags()
 
-	defer func() {
-		CloseOutput()
+	defer CloseOutput()
+
+	exitSigs := make(chan os.Signal, 1)
+	signal.Notify(exitSigs, syscall.SIGINT, syscall.SIGTERM)
+
+	usr1Sig := make(chan os.Signal, 1)
+	signal.Notify(usr1Sig, syscall.SIGUSR1)
+
+	go func() {
+		for {
+			<-usr1Sig
+			UpdateConfig()
+		}
 	}()
 
-	sigs := make(chan os.Signal, 1)
-	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
-
 	SyncLoop()
-	<-sigs
+	<-exitSigs
 	os.Exit(0)
 }
 
@@ -62,7 +70,7 @@ func HandleFlags() {
 	flag.Parse()
 
 	if *displayVersion {
-		fmt.Println("v0.0.1-beta")
+		fmt.Println("v0.2.1")
 		os.Exit(0)
 	}
 
@@ -78,13 +86,12 @@ func HandleFlags() {
 
 	if *configPath != "" {
 		if err = ReadConfig(*configPath); err != nil {
-			fmt.Println("The set config path is not valid! Falling back to the config from default path...\nErrors: ", err.Error())
+			log.Println("The set config path is not valid! Falling back to the config from default path...\nErrors: ", err.Error())
 		}
 	}
 	if *configPath == "" || err != nil {
 		if err := ReadConfigFromDefaultPath(); err != nil {
-			fmt.Println("The config from default path is no valid! Falling back to the default config...\nErrors: ", err.Error())
-			CurrentConfig = DefaultConfig()
+			log.Println("The config from default path is no valid! Falling back to the default config...\nErrors: ", err.Error())
 		}
 	}
 
@@ -107,8 +114,7 @@ func HandleFlags() {
 
 	if *clearCacheMode {
 		if *songNameFilter == "" && *artistNameFilter == "" && *albumNameFilter == "" && *durationFilter == 0 {
-			fmt.Println("The -clear-cache flag is set, but no filters are! Check -help for more information.")
-			os.Exit(1)
+			log.Fatalln("The -clear-cache flag is set, but no filters are! Check -help for more information.")
 		}
 
 		currentCacheDir := CurrentConfig.Cache.CacheDir
@@ -120,7 +126,7 @@ func HandleFlags() {
 		cacheFiles, err := os.ReadDir(os.ExpandEnv(currentCacheDir))
 
 		if err != nil {
-			fmt.Println("Something is wrong with the cache directory. Not created yet? Try and launch the main process.")
+			log.Println("Something is wrong with the cache directory. Not created yet? Try and launch the main process.")
 		}
 
 		deletedFiles := 0

@@ -5,6 +5,8 @@ import (
 	"os"
 )
 
+var currentConfigPath string
+
 // LEVEL 0
 
 type Config struct {
@@ -54,8 +56,6 @@ type InstrumentalConfig struct {
 	MaxCount uint    `json:"maxCount"`
 }
 
-var CurrentConfig Config
-
 func ReadConfig(path string) error {
 	configFile, err := os.ReadFile(os.ExpandEnv(path))
 	if err != nil {
@@ -66,10 +66,14 @@ func ReadConfig(path string) error {
 		return err
 	}
 
+	currentConfigPath = path
+
 	return nil
 }
 
 func ReadConfigFromDefaultPath() error {
+	CurrentConfig = defaultConfig
+
 	defaultDirectory, err := os.UserConfigDir()
 	if err != nil {
 		return err
@@ -82,15 +86,14 @@ func ReadConfigFromDefaultPath() error {
 	}
 
 	if _, err := os.Lstat(defaultDirectory + "/config.json"); err != nil {
-		defaultConfig, err := json.MarshalIndent(DefaultConfig(), "", "    ")
+		defaultConfigJSON, err := json.MarshalIndent(defaultConfig, "", "    ")
 		if err != nil {
 			return err
 		}
-		err = os.WriteFile(defaultDirectory+"/config.json", defaultConfig, 0777)
+		err = os.WriteFile(defaultDirectory+"/config.json", defaultConfigJSON, 0777)
 		if err != nil {
 			return err
 		}
-		CurrentConfig = DefaultConfig()
 	} else {
 		configFile, err := os.ReadFile(defaultDirectory + "/config.json")
 		if err != nil {
@@ -101,44 +104,57 @@ func ReadConfigFromDefaultPath() error {
 		}
 	}
 
+	currentConfigPath = defaultDirectory + "/config.json"
+
 	return nil
 }
 
-func DefaultConfig() Config {
-	return Config{
-		Playerctl: PlayerctlConfig{
-			IncludedPlayers:            []string{},
-			ExcludedPlayers:            []string{},
-			PlayerctlSongCheckInterval: 0.5,
-		},
-		Cache: CacheConfig{
-			Enabled:       true,
-			CacheDir:      "$XDG_CACHE_DIR/playerctl-lyrics",
-			CacheLifeSpan: 14,
-		},
-		Output: OutputConfig{
-			TimestampOffset:                         0,
-			TerminalOutputInOneLine:                 false,
-			ShowSongNotFoundWarning:                 true,
-			ShowNotSyncedLyricsWarning:              true,
-			ShowGettingLyricsMessage:                true,
-			ShowRepeatedLyricsMultiplier:            true,
-			RepeatedLyricsMultiplierFormat:          "(x%v)",
-			PrintRepeatedLyricsMultiplierToTheRight: true,
-			Romanization: RomanizationConfig{
-				Japanese: false,
-				Chinese:  false,
-				Korean:   false,
-			},
-			Instrumental: InstrumentalConfig{
-				Interval: 0.5,
-				Symbol:   "♪",
-				MaxCount: 3,
-			},
-		},
+func UpdateConfig() {
+	configFile, err := os.ReadFile(os.ExpandEnv(currentConfigPath))
+	if err != nil {
+		PrintOverwrite("Errors while reading config! Falling back...")
+		return
+	}
+
+	if err := json.Unmarshal(configFile, &CurrentConfig); err != nil {
+		PrintOverwrite("Errors while parsing config! Falling back...")
+		return
 	}
 }
 
 func (r *RomanizationConfig) IsEnabled() bool {
 	return r.Japanese || r.Chinese || r.Korean
+}
+
+var defaultConfig = Config{
+	Playerctl: PlayerctlConfig{
+		IncludedPlayers:            []string{},
+		ExcludedPlayers:            []string{},
+		PlayerctlSongCheckInterval: 0.5,
+	},
+	Cache: CacheConfig{
+		Enabled:       true,
+		CacheDir:      "$XDG_CACHE_DIR/playerctl-lyrics",
+		CacheLifeSpan: 14,
+	},
+	Output: OutputConfig{
+		TimestampOffset:                         0,
+		TerminalOutputInOneLine:                 false,
+		ShowSongNotFoundWarning:                 true,
+		ShowNotSyncedLyricsWarning:              true,
+		ShowGettingLyricsMessage:                true,
+		ShowRepeatedLyricsMultiplier:            true,
+		RepeatedLyricsMultiplierFormat:          "(x%v)",
+		PrintRepeatedLyricsMultiplierToTheRight: true,
+		Romanization: RomanizationConfig{
+			Japanese: false,
+			Chinese:  false,
+			Korean:   false,
+		},
+		Instrumental: InstrumentalConfig{
+			Interval: 0.5,
+			Symbol:   "♪",
+			MaxCount: 3,
+		},
+	},
 }

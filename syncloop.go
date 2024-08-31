@@ -7,8 +7,6 @@ import (
 )
 
 func SyncLoop() {
-	var currentSong SongData
-
 	checkerTicker := time.NewTicker(time.Duration(CurrentConfig.Playerctl.PlayerctlSongCheckInterval*1000) * time.Millisecond)
 	positionCheckTicker := time.NewTimer(time.Second)
 	positionInnerCheckTicker := time.NewTicker(time.Second)
@@ -25,11 +23,10 @@ func SyncLoop() {
 		for {
 			<-checkerTicker.C
 			song := GetSongData()
-			if song.Song != currentSong.Song || song.Artist != currentSong.Artist || song.Album != currentSong.Album || song.Duration != currentSong.Duration {
+			if song.Song != CurrentSong.Song || song.Artist != CurrentSong.Artist || song.Album != CurrentSong.Album || song.Duration != CurrentSong.Duration {
 				_, position = GetPlayerData()
 				timeBeforeGettingLyrics = time.Now()
-				currentSong = song
-				UpdateData(currentSong)
+				CurrentSong = song
 
 				songChanged <- true
 			}
@@ -42,15 +39,15 @@ func SyncLoop() {
 			<-songChanged
 
 			// If the duration equals 0s, then there are no supported players out there.
-			if currentSong.Duration == 0 {
-				currentSong.LyricsType = 4
+			if CurrentSong.Duration == 0 {
+				CurrentSong.LyricsType = 4
 				fullLyrChan <- false
 				continue
 			}
 
-			GetSyncedLyrics(&currentSong)
-			if currentSong.LyricsType == 5 {
-				currentSong.LyricsType = 6
+			GetSyncedLyrics(&CurrentSong)
+			if CurrentSong.LyricsType == 5 {
+				CurrentSong.LyricsType = 6
 			}
 
 			fullLyrChan <- true
@@ -87,9 +84,9 @@ func SyncLoop() {
 
 			prevLyric := ""
 			count := 1
-			for i, lyric := range currentSong.Lyrics {
+			for i, lyric := range CurrentSong.Lyrics {
 				if CurrentConfig.Output.Romanization.IsEnabled() && IsSupportedAsianLang(lyric) {
-					currentSong.Lyrics[i] = Romanize(lyric)
+					CurrentSong.Lyrics[i] = Romanize(lyric)
 				}
 				if CurrentConfig.Output.ShowRepeatedLyricsMultiplier {
 					if lyric == prevLyric && lyric != "" {
@@ -101,24 +98,23 @@ func SyncLoop() {
 
 					if count != 1 {
 						if CurrentConfig.Output.PrintRepeatedLyricsMultiplierToTheRight {
-							currentSong.Lyrics[i] = fmt.Sprintf(lyric+" "+CurrentConfig.Output.RepeatedLyricsMultiplierFormat, count)
+							CurrentSong.Lyrics[i] = fmt.Sprintf(lyric+" "+CurrentConfig.Output.RepeatedLyricsMultiplierFormat, count)
 						} else {
-							currentSong.Lyrics[i] = fmt.Sprintf(CurrentConfig.Output.RepeatedLyricsMultiplierFormat+" "+lyric, count)
+							CurrentSong.Lyrics[i] = fmt.Sprintf(CurrentConfig.Output.RepeatedLyricsMultiplierFormat+" "+lyric, count)
 						}
 					}
 				}
 			}
 
 			if CurrentConfig.Output.TimestampOffset != 0 {
-				for i, timestamp := range currentSong.LyricTimestamps {
-					currentSong.LyricTimestamps[i] = timestamp + (float64(CurrentConfig.Output.TimestampOffset) / 1000)
+				for i, timestamp := range CurrentSong.LyricTimestamps {
+					CurrentSong.LyricTimestamps[i] = timestamp + (float64(CurrentConfig.Output.TimestampOffset) / 1000)
 				}
 			}
 
 			timeAfterGettingLyrics := time.Now()
 			position += math.Max(timeAfterGettingLyrics.Sub(timeBeforeGettingLyrics).Seconds(), 0) + 0.1 // tests have shown that additional 0.1 is required to look good
 
-			UpdateData(currentSong)
 			UpdatePosition(position)
 		}
 	}()
