@@ -54,13 +54,13 @@ func WriteLyrics() {
 
 				lyricsTimerDuration := time.Duration(int64(math.Abs(nextLyricTimestamp-currentPosition-0.01)*1000)) * time.Millisecond // tests have shown that it slows down and mismatches without additional 0.01 offset
 
+				writtenTimestamp = currentLyricTimestamp
 				// If the currentLyricTimestamp remained at -1.0
 				// then reset an instrumental ticker until the first lyric shows up
 				if currentLyricTimestamp == -1 {
 					instrumentalLyric = true
 					instrTimer.Reset(1)
 				} else if isPlaying && writtenTimestamp != currentLyricTimestamp { // If paused then don't print the lyric and instead try once more time later
-					writtenTimestamp = currentLyricTimestamp
 					if lyric == "" {
 						// An empty lyric basically means instrumental part,
 						// so we reset the instrumental ticker and moving on
