@@ -1,4 +1,4 @@
-package main
+package pkg
 
 type SongData struct {
 	Song            string
@@ -9,10 +9,4 @@ type SongData struct {
 	LyricTimestamps []float64
 	// 0 = synced, 1 = plain, 2 = instrumental, 3 = song not found, 4 = no active players, 5 = in progress, 6 = unknown
 	LyricsType byte
-}
-
-type LrcLibJson struct {
-	Instrumental bool   `json:"instrumental"`
-	PlainLyrics  string `json:"plainLyrics"`
-	SyncedLyrics string `json:"syncedLyrics"`
 }

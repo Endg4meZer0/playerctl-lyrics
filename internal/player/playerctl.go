@@ -1,18 +1,20 @@
-package main
+package player
 
 import (
 	"os/exec"
 	"strconv"
 	"strings"
+
+	"lrcsnc/pkg"
 )
 
-func GetSongData() SongData {
+func GetSongData() pkg.SongData {
 	var cmd *exec.Cmd
-	if len(CurrentConfig.Playerctl.IncludedPlayers) != 0 {
-		includedPlayers := strings.Join(CurrentConfig.Playerctl.IncludedPlayers, ",")
+	if len(pkg.CurrentConfig.Playerctl.IncludedPlayers) != 0 {
+		includedPlayers := strings.Join(pkg.CurrentConfig.Playerctl.IncludedPlayers, ",")
 		cmd = exec.Command("playerctl", "metadata", "-p", includedPlayers, "-f", "{{title}}\n{{artist}}\n{{album}}\n{{mpris:length}}")
-	} else if len(CurrentConfig.Playerctl.ExcludedPlayers) != 0 {
-		excludedPlayers := strings.Join(CurrentConfig.Playerctl.ExcludedPlayers, ",")
+	} else if len(pkg.CurrentConfig.Playerctl.ExcludedPlayers) != 0 {
+		excludedPlayers := strings.Join(pkg.CurrentConfig.Playerctl.ExcludedPlayers, ",")
 		cmd = exec.Command("playerctl", "metadata", "-i", excludedPlayers, "-f", "{{title}}\n{{artist}}\n{{album}}\n{{mpris:length}}")
 	} else {
 		cmd = exec.Command("playerctl", "metadata", "-f", "{{title}}\n{{artist}}\n{{album}}\n{{mpris:length}}")
@@ -23,7 +25,7 @@ func GetSongData() SongData {
 	soutput := strings.Split(string(output), "\n")
 
 	if len(soutput) != 5 {
-		return SongData{Song: "", Artist: "", Album: "", LyricsType: 4}
+		return pkg.SongData{Song: "", Artist: "", Album: "", LyricsType: 4}
 	}
 
 	song := soutput[0]
@@ -32,7 +34,7 @@ func GetSongData() SongData {
 	durationStr := soutput[3]
 
 	if song == "" || durationStr == "" {
-		return SongData{Song: "", Artist: "", Album: "", LyricsType: 4}
+		return pkg.SongData{Song: "", Artist: "", Album: "", LyricsType: 4}
 	}
 
 	var duration float64
@@ -43,17 +45,17 @@ func GetSongData() SongData {
 		duration = duration2 / 1000000
 	}
 
-	return SongData{Song: song, Artist: artist, Album: album, Duration: duration, LyricsType: 5}
+	return pkg.SongData{Song: song, Artist: artist, Album: album, Duration: duration, LyricsType: 5}
 }
 
 // Get the player's status and position
 func GetPlayerData() (bool, float64) {
 	var cmd *exec.Cmd
-	if len(CurrentConfig.Playerctl.IncludedPlayers) != 0 {
-		includedPlayers := strings.Join(CurrentConfig.Playerctl.IncludedPlayers, ",")
+	if len(pkg.CurrentConfig.Playerctl.IncludedPlayers) != 0 {
+		includedPlayers := strings.Join(pkg.CurrentConfig.Playerctl.IncludedPlayers, ",")
 		cmd = exec.Command("playerctl", "metadata", "-p", includedPlayers, "-f", "{{status}}\n{{position}}")
-	} else if len(CurrentConfig.Playerctl.ExcludedPlayers) != 0 {
-		excludedPlayers := strings.Join(CurrentConfig.Playerctl.ExcludedPlayers, ",")
+	} else if len(pkg.CurrentConfig.Playerctl.ExcludedPlayers) != 0 {
+		excludedPlayers := strings.Join(pkg.CurrentConfig.Playerctl.ExcludedPlayers, ",")
 		cmd = exec.Command("playerctl", "metadata", "-i", excludedPlayers, "-f", "{{status}}\n{{position}}")
 	} else {
 		cmd = exec.Command("playerctl", "metadata", "-f", "{{status}}\n{{position}}")

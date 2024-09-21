@@ -1,4 +1,4 @@
-package main
+package cache
 
 import (
 	"encoding/json"
@@ -6,12 +6,12 @@ import (
 	"log"
 	"math"
 	"os"
-	"regexp"
 	"strings"
 	"time"
-)
 
-var badCharactersRegexp = regexp.MustCompile(`[:;|\/\\<>\.]+`)
+	"lrcsnc/pkg"
+	"lrcsnc/util"
+)
 
 type Cache struct {
 	LyricTimestamps []float64 `json:"lyricTimestamps"`
@@ -19,11 +19,11 @@ type Cache struct {
 	Instrumental    bool      `json:"instrumental"`
 }
 
-func GetCachedLyrics(song *SongData) (Cache, bool) {
-	if !CurrentConfig.Cache.Enabled {
+func GetCachedLyrics(song *pkg.SongData) (Cache, bool) {
+	if !pkg.CurrentConfig.Cache.Enabled {
 		return Cache{}, true
 	}
-	cacheDirectory := CurrentConfig.Cache.CacheDir
+	cacheDirectory := pkg.CurrentConfig.Cache.CacheDir
 	if strings.Contains(cacheDirectory, "$XDG_CACHE_DIR") && os.Getenv("$XDG_CACHE_DIR") == "" {
 		cacheDirectory = strings.ReplaceAll(cacheDirectory, "$XDG_CACHE_DIR", "$HOME/.cache")
 	}
@@ -41,9 +41,9 @@ func GetCachedLyrics(song *SongData) (Cache, bool) {
 			return Cache{}, false
 		}
 
-		if CurrentConfig.Cache.CacheLifeSpan != 0 {
+		if pkg.CurrentConfig.Cache.CacheLifeSpan != 0 {
 			cacheStats, _ := os.Lstat(fullPath)
-			return cachedData, time.Since(cacheStats.ModTime()).Hours() <= float64(CurrentConfig.Cache.CacheLifeSpan)*24
+			return cachedData, time.Since(cacheStats.ModTime()).Hours() <= float64(pkg.CurrentConfig.Cache.CacheLifeSpan)*24
 		} else {
 			return cachedData, true
 		}
@@ -52,8 +52,8 @@ func GetCachedLyrics(song *SongData) (Cache, bool) {
 	}
 }
 
-func StoreCachedLyrics(song SongData, data Cache) error {
-	cacheDirectory := CurrentConfig.Cache.CacheDir
+func StoreCachedLyrics(song pkg.SongData, data Cache) error {
+	cacheDirectory := pkg.CurrentConfig.Cache.CacheDir
 	if strings.Contains(cacheDirectory, "$XDG_CACHE_DIR") && os.Getenv("$XDG_CACHE_DIR") == "" {
 		cacheDirectory = strings.ReplaceAll(cacheDirectory, "$XDG_CACHE_DIR", "$HOME/.cache")
 	}
@@ -80,9 +80,5 @@ func StoreCachedLyrics(song SongData, data Cache) error {
 }
 
 func getFilename(song string, artist string, album string, duration float64) string {
-	return fmt.Sprintf("%v.%v.%v.%v", RemoveBadCharacters(song), RemoveBadCharacters(artist), RemoveBadCharacters(album), math.Round(duration))
-}
-
-func RemoveBadCharacters(str string) string {
-	return badCharactersRegexp.ReplaceAllString(str, "_")
+	return fmt.Sprintf("%v.%v.%v.%v", util.RemoveBadCharacters(song), util.RemoveBadCharacters(artist), util.RemoveBadCharacters(album), math.Round(duration))
 }

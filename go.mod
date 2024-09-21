@@ -1,4 +1,4 @@
-module playerctl-lyrics
+module lrcsnc
 
 go 1.22.5
 

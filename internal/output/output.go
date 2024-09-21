@@ -1,4 +1,4 @@
-package main
+package output
 
 import (
 	"log"
@@ -14,8 +14,6 @@ func PrintLyric(lyric string) {
 	if outputDestChanged {
 		outputDestination.Truncate(0)
 		outputDestination.Seek(0, 0)
-	} else if CurrentConfig.Output.TerminalOutputInOneLine {
-		outputDestination.WriteString("\033[1A\033[K\r")
 	}
 	if overwrite == "" {
 		outputDestination.WriteString(lyric + "\n")
@@ -41,8 +39,6 @@ func PrintOverwrite(over string) {
 	if outputDestChanged {
 		outputDestination.Truncate(0)
 		outputDestination.Seek(0, 0)
-	} else if CurrentConfig.Output.TerminalOutputInOneLine {
-		outputDestination.WriteString("\033[1A\033[K\r")
 	}
 	outputDestination.WriteString(overwrite + "\n")
 	go func() {

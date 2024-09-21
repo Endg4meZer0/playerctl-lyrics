@@ -1,7 +1,10 @@
-package main
+package loop
 
 import (
 	"fmt"
+	"lrcsnc/internal/output"
+	"lrcsnc/internal/player"
+	"lrcsnc/pkg"
 	"math"
 	"strings"
 	"time"
@@ -22,14 +25,14 @@ func WriteLyrics() {
 	go func() {
 		for {
 			<-lyricsTimer.C
-			if CurrentSong.LyricsType == 4 {
+			if pkg.CurrentSong.LyricsType == 4 {
 				instrTimer.Stop()
 				fmt.Println()
-			} else if CurrentSong.LyricsType >= 2 {
+			} else if pkg.CurrentSong.LyricsType >= 2 {
 				instrumentalLyric = true
 				instrTimer.Reset(1)
 			} else {
-				isPlaying, currentPlayerPosition := GetPlayerData()
+				isPlaying, currentPlayerPosition := player.GetPlayerData()
 				if math.Abs(currentPosition-currentPlayerPosition) > 1 {
 					currentPosition = currentPlayerPosition
 				}
@@ -40,16 +43,16 @@ func WriteLyrics() {
 				lyric := ""
 				timestampIndex := -1
 
-				for i, timestamp := range CurrentSong.LyricTimestamps {
+				for i, timestamp := range pkg.CurrentSong.LyricTimestamps {
 					if timestamp <= currentPosition && currentLyricTimestamp <= timestamp {
 						currentLyricTimestamp = timestamp
-						lyric = CurrentSong.Lyrics[i]
+						lyric = pkg.CurrentSong.Lyrics[i]
 						timestampIndex = i
 					}
 				}
 
-				if timestampIndex != len(CurrentSong.LyricTimestamps)-1 {
-					nextLyricTimestamp = CurrentSong.LyricTimestamps[timestampIndex+1]
+				if timestampIndex != len(pkg.CurrentSong.LyricTimestamps)-1 {
+					nextLyricTimestamp = pkg.CurrentSong.LyricTimestamps[timestampIndex+1]
 				}
 
 				lyricsTimerDuration := time.Duration(int64(math.Abs(nextLyricTimestamp-currentPosition-0.01)*1000)) * time.Millisecond // tests have shown that it slows down and mismatches without additional 0.01 offset
@@ -73,7 +76,7 @@ func WriteLyrics() {
 						// 3) call the next writing goroutine
 						instrumentalLyric = false
 						instrTimer.Stop()
-						PrintLyric(lyric)
+						output.PrintLyric(lyric)
 					}
 				}
 				currentPosition = nextLyricTimestamp
@@ -87,28 +90,28 @@ func WriteLyrics() {
 // instrTimer.Reset to continue again
 func WriteInstrumental() {
 	i := 1
-	instrTimer.Reset(time.Duration(CurrentConfig.Output.Instrumental.Interval*1000) * time.Millisecond)
+	instrTimer.Reset(time.Duration(pkg.CurrentConfig.Output.Instrumental.Interval*1000) * time.Millisecond)
 	for {
 		<-instrTimer.C
-		note := CurrentConfig.Output.Instrumental.Symbol
-		j := int(CurrentConfig.Output.Instrumental.MaxCount + 1)
+		note := pkg.CurrentConfig.Output.Instrumental.Symbol
+		j := int(pkg.CurrentConfig.Output.Instrumental.MaxCount + 1)
 		// Not playing? Don't change anything, or it will look kinda strange
-		if isPlaying, _ := GetPlayerData(); isPlaying {
+		if isPlaying, _ := player.GetPlayerData(); isPlaying {
 			if !instrumentalLyric {
 				continue
 			}
 			stringToPrint := ""
-			switch CurrentSong.LyricsType {
+			switch pkg.CurrentSong.LyricsType {
 			case 1:
-				if CurrentConfig.Output.ShowNotSyncedLyricsWarning {
+				if pkg.CurrentConfig.Output.ShowNotSyncedLyricsWarning {
 					stringToPrint += "This song's lyrics are not synced on LrcLib! "
 				}
 			case 3:
-				if CurrentConfig.Output.ShowSongNotFoundWarning {
+				if pkg.CurrentConfig.Output.ShowSongNotFoundWarning {
 					stringToPrint += "Current song was not found on LrcLib! "
 				}
 			case 5:
-				if CurrentConfig.Output.ShowGettingLyricsMessage {
+				if pkg.CurrentConfig.Output.ShowGettingLyricsMessage {
 					stringToPrint += "Getting lyrics... "
 				}
 			case 6:
@@ -117,7 +120,7 @@ func WriteInstrumental() {
 
 			stringToPrint += strings.Repeat(note, i%j)
 
-			PrintLyric(stringToPrint)
+			output.PrintLyric(stringToPrint)
 
 			i++
 			// Don't want to cause any overflow here
@@ -125,6 +128,6 @@ func WriteInstrumental() {
 				i = 1
 			}
 		}
-		instrTimer.Reset(time.Duration(CurrentConfig.Output.Instrumental.Interval*1000) * time.Millisecond)
+		instrTimer.Reset(time.Duration(pkg.CurrentConfig.Output.Instrumental.Interval*1000) * time.Millisecond)
 	}
 }
