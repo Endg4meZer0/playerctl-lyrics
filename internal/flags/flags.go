@@ -10,8 +10,8 @@ import (
 
 	"lrcsnc/config"
 	"lrcsnc/internal/output"
+	"lrcsnc/internal/util"
 	"lrcsnc/pkg"
-	"lrcsnc/util"
 )
 
 var helpText = []string{

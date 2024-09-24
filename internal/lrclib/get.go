@@ -11,8 +11,8 @@ import (
 	"strings"
 
 	"lrcsnc/internal/cache"
+	"lrcsnc/internal/util"
 	"lrcsnc/pkg"
-	"lrcsnc/util"
 )
 
 // Sets the Lyrics and LyricTimestamps properties in SongData object.

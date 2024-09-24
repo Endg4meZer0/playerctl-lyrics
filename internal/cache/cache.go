@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
+	"lrcsnc/internal/util"
 	"lrcsnc/pkg"
-	"lrcsnc/util"
 )
 
 type Cache struct {
