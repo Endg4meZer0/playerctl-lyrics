@@ -2,10 +2,12 @@ package config
 
 import (
 	"encoding/json"
+	"log"
 	"os"
 
 	"lrcsnc/internal/output"
-	"lrcsnc/pkg"
+	"lrcsnc/pkg/global"
+	"lrcsnc/pkg/structs"
 )
 
 var currentConfigPath string
@@ -16,23 +18,36 @@ func ReadConfig(path string) error {
 		return err
 	}
 
-	if err := json.Unmarshal(configFile, &pkg.CurrentConfig); err != nil {
+	var config structs.Config
+
+	if err := json.Unmarshal(configFile, &config); err != nil {
 		return err
 	}
 
-	currentConfigPath = path
+	errs, fatal := ValidateConfig(&config)
+
+	for _, v := range errs {
+		log.Println(v)
+	}
+
+	if !fatal {
+		global.CurrentConfig = config
+		currentConfigPath = path
+	} else {
+		return ConfigError("FATAL ERRORS IN THE CONFIG WERE DETECTED! Rolling back...")
+	}
 
 	return nil
 }
 
 func ReadConfigFromDefaultPath() error {
-	pkg.CurrentConfig = defaultConfig
+	global.CurrentConfig = defaultConfig
 
 	defaultDirectory, err := os.UserConfigDir()
 	if err != nil {
 		return err
 	}
-	defaultDirectory += "/playerctl-lyrics"
+	defaultDirectory += "/lrcsnc"
 
 	if _, err := os.ReadDir(defaultDirectory); err != nil {
 		os.Mkdir(defaultDirectory, 0777)
@@ -53,8 +68,23 @@ func ReadConfigFromDefaultPath() error {
 		if err != nil {
 			return err
 		}
-		if err := json.Unmarshal(configFile, &pkg.CurrentConfig); err != nil {
+
+		var config structs.Config
+
+		if err := json.Unmarshal(configFile, &config); err != nil {
 			return err
+		}
+
+		errs, fatal := ValidateConfig(&config)
+
+		for _, v := range errs {
+			log.Println(v)
+		}
+
+		if !fatal {
+			global.CurrentConfig = config
+		} else {
+			return ConfigError("FATAL ERRORS IN THE CONFIG WERE DETECTED! Rolling back...")
 		}
 	}
 
@@ -70,27 +100,44 @@ func UpdateConfig() {
 		return
 	}
 
-	if err := json.Unmarshal(configFile, &pkg.CurrentConfig); err != nil {
+	var config structs.Config
+
+	if err := json.Unmarshal(configFile, &config); err != nil {
+		output.PrintOverwrite("Errors while parsing config! Falling back...")
+		return
+	}
+
+	errs, fatal := ValidateConfig(&config)
+
+	for _, v := range errs {
+		log.Println(v)
+	}
+
+	if !fatal {
+		global.CurrentConfig = config
+	} else {
 		output.PrintOverwrite("Errors while parsing config! Falling back...")
 		return
 	}
 }
 
-var defaultConfig = pkg.Config{
-	Global: pkg.GlobalConfig{
-		DisableActiveSync: false,
+var defaultConfig = structs.Config{
+	Global: structs.GlobalConfig{
+		LyricsProvider:   "lrclib",
+		EnableActiveSync: false,
 	},
-	Playerctl: pkg.PlayerctlConfig{
-		IncludedPlayers:            []string{},
-		ExcludedPlayers:            []string{},
-		PlayerctlSongCheckInterval: 0.5,
+	Player: structs.PlayerConfig{
+		PlayerProvider:    "playerctl",
+		IncludedPlayers:   []string{},
+		ExcludedPlayers:   []string{},
+		SongCheckInterval: 0.5,
 	},
-	Cache: pkg.CacheConfig{
+	Cache: structs.CacheConfig{
 		Enabled:       true,
-		CacheDir:      "$XDG_CACHE_DIR/playerctl-lyrics",
+		CacheDir:      "$XDG_CACHE_DIR/lrcsnc",
 		CacheLifeSpan: 14,
 	},
-	Output: pkg.OutputConfig{
+	Output: structs.OutputConfig{
 		TimestampOffset:                         0,
 		TerminalOutputInOneLine:                 false,
 		ShowSongNotFoundWarning:                 true,
@@ -99,12 +146,12 @@ var defaultConfig = pkg.Config{
 		ShowRepeatedLyricsMultiplier:            true,
 		RepeatedLyricsMultiplierFormat:          "(x%v)",
 		PrintRepeatedLyricsMultiplierToTheRight: true,
-		Romanization: pkg.RomanizationConfig{
+		Romanization: structs.RomanizationConfig{
 			Japanese: false,
 			Chinese:  false,
 			Korean:   false,
 		},
-		Instrumental: pkg.InstrumentalConfig{
+		Instrumental: structs.InstrumentalConfig{
 			Interval: 0.5,
 			Symbol:   "♪",
 			MaxCount: 3,

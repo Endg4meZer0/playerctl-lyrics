@@ -1,7 +1,7 @@
 package romanization
 
 import (
-	"lrcsnc/pkg"
+	"lrcsnc/pkg/global"
 	"strings"
 	"unicode"
 
@@ -35,7 +35,7 @@ func Romanize(str string) (out string) {
 		}
 	}()
 
-	if pkg.CurrentConfig.Output.Romanization.Japanese {
+	if global.CurrentConfig.Output.Romanization.Japanese {
 		out = jp.ToRomaji(str, true)
 		if out != strings.ToLower(str) {
 			// Kanji and zh/kr characters are coded using 3 bytes.
@@ -49,7 +49,7 @@ func Romanize(str string) (out string) {
 		}
 	}
 
-	if pkg.CurrentConfig.Output.Romanization.Chinese {
+	if global.CurrentConfig.Output.Romanization.Chinese {
 		out = zhCharToPinyin(str)
 		if out != str {
 			if !isChar(out[:3], supportedAsianLangsUnicodeRangeTable) {
@@ -61,7 +61,7 @@ func Romanize(str string) (out string) {
 		}
 	}
 
-	if pkg.CurrentConfig.Output.Romanization.Korean {
+	if global.CurrentConfig.Output.Romanization.Korean {
 		r := kr.NewRomanizer(str)
 		out = r.Romanize()
 		if out != str {

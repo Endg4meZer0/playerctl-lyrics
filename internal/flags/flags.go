@@ -11,12 +11,12 @@ import (
 	"lrcsnc/config"
 	"lrcsnc/internal/output"
 	"lrcsnc/internal/util"
-	"lrcsnc/pkg"
+	"lrcsnc/pkg/global"
 )
 
 var helpText = []string{
 	"Usage:",
-	"  playerctl-lyrics [FLAGS...]",
+	"  lrcsnc [FLAGS...]",
 	"  If certain flags are not set, the command will start the main process that gets lyrics, syncs them with playerctl and prints them to stdout.",
 	"",
 	"Flags:",
@@ -61,7 +61,7 @@ func HandleFlags() {
 		}
 	}
 
-	if pkg.CurrentConfig.Output.TerminalOutputInOneLine {
+	if global.CurrentConfig.Output.TerminalOutputInOneLine {
 		fmt.Println()
 	}
 
@@ -70,7 +70,7 @@ func HandleFlags() {
 			os.MkdirAll(*cacheDirectory, 0777)
 			os.Chmod(*cacheDirectory, 0777)
 		}
-		pkg.CurrentConfig.Cache.CacheDir = *cacheDirectory
+		global.CurrentConfig.Cache.CacheDir = *cacheDirectory
 	}
 
 	if *outputFilePath != "" {
@@ -83,7 +83,7 @@ func HandleFlags() {
 			log.Fatalln("The -clear-cache flag is set, but no filters are! Check -help for more information.")
 		}
 
-		currentCacheDir := pkg.CurrentConfig.Cache.CacheDir
+		currentCacheDir := global.CurrentConfig.Cache.CacheDir
 
 		if strings.Contains(currentCacheDir, "$XDG_CACHE_DIR") && os.Getenv("$XDG_CACHE_DIR") == "" {
 			currentCacheDir = strings.ReplaceAll(currentCacheDir, "$XDG_CACHE_DIR", "$HOME/.cache")

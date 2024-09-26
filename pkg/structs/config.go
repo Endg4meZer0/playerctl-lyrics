@@ -1,27 +1,26 @@
-package pkg
+package structs
 
-var CurrentConfig Config
-
-// CONFIG
 // LEVEL 0
 
 type Config struct {
-	Global    GlobalConfig    `json:"global"`
-	Playerctl PlayerctlConfig `json:"playerctl"`
-	Cache     CacheConfig     `json:"cache"`
-	Output    OutputConfig    `json:"output"`
+	Global GlobalConfig `json:"global"`
+	Player PlayerConfig `json:"player"`
+	Cache  CacheConfig  `json:"cache"`
+	Output OutputConfig `json:"output"`
 }
 
 // LEVEL 1
 
 type GlobalConfig struct {
-	DisableActiveSync bool `json:"disableActiveSync"`
+	LyricsProvider   string `json:"lyricsProvider"`
+	EnableActiveSync bool   `json:"enableActiveSync"`
 }
 
-type PlayerctlConfig struct {
-	IncludedPlayers            []string `json:"includedPlayers"`
-	ExcludedPlayers            []string `json:"excludedPlayers"`
-	PlayerctlSongCheckInterval float64  `json:"playerctlMetadataCheckInterval"`
+type PlayerConfig struct {
+	PlayerProvider    string   `json:"playerProvider"`
+	IncludedPlayers   []string `json:"includedPlayers"`
+	ExcludedPlayers   []string `json:"excludedPlayers"`
+	SongCheckInterval float64  `json:"songCheckInterval"`
 }
 
 type CacheConfig struct {
@@ -56,6 +55,8 @@ type InstrumentalConfig struct {
 	Symbol   string  `json:"symbol"`
 	MaxCount uint    `json:"maxCount"`
 }
+
+// METHODS
 
 func (r *RomanizationConfig) IsEnabled() bool {
 	return r.Japanese || r.Chinese || r.Korean

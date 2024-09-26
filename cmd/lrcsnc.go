@@ -1,9 +1,7 @@
 package cmd
 
 import (
-	"log"
 	"os"
-	"os/exec"
 	"os/signal"
 	"syscall"
 
@@ -14,12 +12,6 @@ import (
 )
 
 func Start() {
-	// Check if playerctl is installed
-	err := exec.Command("playerctl", "--version").Run()
-	if err != nil {
-		log.Fatalln("playerctl is not found!")
-	}
-
 	flags.HandleFlags()
 
 	defer output.CloseOutput()

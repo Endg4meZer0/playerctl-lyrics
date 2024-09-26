@@ -2,6 +2,7 @@
 *debug*
 
 playerctl-lyrics
+lrcsnc
 *.txt
 .fuse_hidden*
 test-*
