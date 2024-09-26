@@ -21,8 +21,8 @@ lrcsnc [OPTION]
 Get more info on on available options with `lrcsnc -help` or on [wiki](https://github.com/Endg4meZer0/lrcsnc/wiki/Available-options).
 
 ## TODO
-- [ ] A CLI implementation for... showing off rices, maybe?
-- [ ] Additional functionality for bars
+- [ ] A TUI implementation for... showing off rices, maybe
+- [ ] Additional functionality for bars (maybe by implementing IPC)
 - [ ] More configuration options?
 - [ ] There is definitely always more!
 

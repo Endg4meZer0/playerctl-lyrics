@@ -13,7 +13,13 @@ func (ce ConfigError) Error() string {
 }
 
 func ValidateConfig(c *structs.Config) (errs []ConfigError, fatal bool) {
-	// Check if playerctl is installed, rollback to
+	// Check if lrclib is set as the lyric provider
+	if c.Global.LyricsProvider != "lrclib" {
+		c.Global.LyricsProvider = "lrclib"
+		errs = append(errs, `WARNING: For now, 'lrclib' is the only lyrics provider. So the "lyricsProvider" property will always turn to 'lrclib' until there are new lyrics providers introduced.`)
+	}
+
+	// Check if playerctl is installed, if not - rollback to direct MPRIS handler
 	err := exec.Command("playerctl", "--version").Run()
 	if err != nil {
 		c.Player.PlayerProvider = "mpris"
