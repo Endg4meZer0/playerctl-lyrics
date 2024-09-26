@@ -1,4 +1,4 @@
-package main
+package cache
 
 import (
 	"encoding/json"
@@ -6,24 +6,19 @@ import (
 	"log"
 	"math"
 	"os"
-	"regexp"
 	"strings"
 	"time"
+
+	"lrcsnc/internal/util"
+	"lrcsnc/pkg/global"
+	"lrcsnc/pkg/structs"
 )
 
-var badCharactersRegexp = regexp.MustCompile(`[:;|\/\\<>\.]+`)
-
-type Cache struct {
-	LyricTimestamps []float64 `json:"lyricTimestamps"`
-	Lyrics          []string  `json:"lyrics"`
-	Instrumental    bool      `json:"instrumental"`
-}
-
-func GetCachedLyrics(song *SongData) (Cache, bool) {
-	if !CurrentConfig.Cache.Enabled {
-		return Cache{}, true
+func GetCachedLyrics(song structs.SongData) (structs.SongLyricsData, bool) {
+	if !global.CurrentConfig.Cache.Enabled {
+		return structs.SongLyricsData{}, true
 	}
-	cacheDirectory := CurrentConfig.Cache.CacheDir
+	cacheDirectory := global.CurrentConfig.Cache.CacheDir
 	if strings.Contains(cacheDirectory, "$XDG_CACHE_DIR") && os.Getenv("$XDG_CACHE_DIR") == "" {
 		cacheDirectory = strings.ReplaceAll(cacheDirectory, "$XDG_CACHE_DIR", "$HOME/.cache")
 	}
@@ -34,26 +29,26 @@ func GetCachedLyrics(song *SongData) (Cache, bool) {
 	fullPath := cacheDirectory + "/" + filename + ".json"
 
 	if file, err := os.ReadFile(fullPath); err == nil {
-		var cachedData Cache
+		var cachedData structs.SongLyricsData
 		err = json.Unmarshal(file, &cachedData)
 		if err != nil {
 			log.Println(err)
-			return Cache{}, false
+			return structs.SongLyricsData{}, false
 		}
 
-		if CurrentConfig.Cache.CacheLifeSpan != 0 {
+		if global.CurrentConfig.Cache.CacheLifeSpan != 0 {
 			cacheStats, _ := os.Lstat(fullPath)
-			return cachedData, time.Since(cacheStats.ModTime()).Hours() <= float64(CurrentConfig.Cache.CacheLifeSpan)*24
+			return cachedData, time.Since(cacheStats.ModTime()).Hours() <= float64(global.CurrentConfig.Cache.CacheLifeSpan)*24
 		} else {
 			return cachedData, true
 		}
 	} else {
-		return Cache{}, false
+		return structs.SongLyricsData{}, false
 	}
 }
 
-func StoreCachedLyrics(song SongData, data Cache) error {
-	cacheDirectory := CurrentConfig.Cache.CacheDir
+func StoreCachedLyrics(song structs.SongData, data structs.SongLyricsData) error {
+	cacheDirectory := global.CurrentConfig.Cache.CacheDir
 	if strings.Contains(cacheDirectory, "$XDG_CACHE_DIR") && os.Getenv("$XDG_CACHE_DIR") == "" {
 		cacheDirectory = strings.ReplaceAll(cacheDirectory, "$XDG_CACHE_DIR", "$HOME/.cache")
 	}
@@ -80,9 +75,5 @@ func StoreCachedLyrics(song SongData, data Cache) error {
 }
 
 func getFilename(song string, artist string, album string, duration float64) string {
-	return fmt.Sprintf("%v.%v.%v.%v", RemoveBadCharacters(song), RemoveBadCharacters(artist), RemoveBadCharacters(album), math.Round(duration))
-}
-
-func RemoveBadCharacters(str string) string {
-	return badCharactersRegexp.ReplaceAllString(str, "_")
+	return fmt.Sprintf("%v.%v.%v.%v", util.RemoveBadCharacters(song), util.RemoveBadCharacters(artist), util.RemoveBadCharacters(album), math.Round(duration))
 }
