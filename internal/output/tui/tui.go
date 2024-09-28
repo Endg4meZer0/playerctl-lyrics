@@ -1,0 +1,425 @@
+package tui
+
+import (
+	"fmt"
+	"math"
+	"strings"
+	"time"
+
+	"lrcsnc/internal/pkg/global"
+	"lrcsnc/internal/player"
+
+	"github.com/charmbracelet/bubbles/progress"
+	vp "github.com/charmbracelet/bubbles/viewport"
+	tea "github.com/charmbracelet/bubbletea"
+	gloss "github.com/charmbracelet/lipgloss"
+)
+
+type model struct {
+	ready bool
+
+	lyricLines      [][]string
+	overwrite       string
+	header          string
+	currentLyric    int
+	cursor          int
+	followSync      bool
+	showTimestamps  bool
+	showProgressBar bool
+	// showLyricTimer  bool
+
+	w int
+
+	lyricViewport      vp.Model
+	timestampsViewport vp.Model
+	progressBar        progress.Model
+}
+
+func InitialModel() model {
+	return model{
+		ready: false,
+
+		lyricLines:      [][]string{},
+		overwrite:       "",
+		header:          "",
+		currentLyric:    -1,
+		cursor:          -1,
+		followSync:      true,
+		showTimestamps:  true,
+		showProgressBar: true,
+
+		progressBar: progress.New(progress.WithSolidFill("10")),
+	}
+}
+
+var (
+	styleLyric           = gloss.NewStyle().AlignHorizontal(gloss.Center).Bold(true)
+	styleBefore          = styleLyric.Foreground(gloss.Color("15")).Faint(true)
+	styleCurrent         = styleLyric.Foreground(gloss.Color("15"))
+	styleAfter           = styleLyric.Foreground(gloss.Color("8"))
+	styleCursor          = styleLyric.Foreground(gloss.Color("11"))
+	styleTimestamp       = gloss.NewStyle().Foreground(gloss.Color("15")).Faint(true)
+	styleTimestampCursor = gloss.NewStyle().Foreground(gloss.Color("11"))
+)
+
+func (m model) Init() tea.Cmd {
+	return tea.Sequence(
+		tea.SetWindowTitle("lrcsnc"),
+		tea.Batch(watchSongInfoChanges(), watchPlayerInfoChanges(), watchCurrentLyricChanges(), watchReceivedOverwrites()),
+	)
+}
+
+func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	switch msg := msg.(type) {
+
+	case songInfoChanged:
+		if global.CurrentSong.LyricsData.LyricsType >= 2 {
+			m.lyricLines = [][]string{{"───"}}
+		} else {
+			m.lyricLines = make([][]string, 0, len(global.CurrentSong.LyricsData.Lyrics))
+			for _, s := range global.CurrentSong.LyricsData.Lyrics {
+				m.lyricLines = append(m.lyricLines, m.lyricWrap(s))
+			}
+		}
+		switch global.CurrentSong.LyricsData.LyricsType {
+		case 1:
+			m.header = " (unsynced)"
+		case 3:
+			m.header = " (not found)"
+		case 4:
+			m.header = "No active players!"
+		case 5:
+			m.header = " (loading lyrics...)"
+		case 6:
+			m.header = " (unknown error :c)"
+		default:
+			m.header = ""
+		}
+		m.lyricViewport.SetContent(gloss.PlaceHorizontal(m.lyricViewport.Width, gloss.Center, m.lyricsView()))
+		m.timestampsViewport.SetContent(m.timestampsView())
+		m.lyricViewport.YOffset = 0
+		m.timestampsViewport.YOffset = 0
+		if global.CurrentSong.LyricsData.LyricsType != 0 {
+			m.followSync = false
+			m.currentLyric = -1
+		}
+		return m, watchSongInfoChanges()
+
+	case playerInfoChanged:
+		m.progressBar.SetPercent(global.CurrentPlayer.Position / global.CurrentSong.Duration)
+		return m, watchPlayerInfoChanges()
+
+	case currentLyricChanged:
+		m.currentLyric = int(msg)
+		if m.followSync {
+			m.cursor = m.currentLyric
+		}
+		m.lyricViewport.SetContent(gloss.PlaceHorizontal(m.lyricViewport.Width, gloss.Center, m.lyricsView()))
+		m.timestampsViewport.SetContent(m.timestampsView())
+		m.lyricViewport.YOffset = min(m.lyricViewport.TotalLineCount()-m.lyricViewport.Height, max(0, m.calcYOffset(m.cursor)))
+		m.timestampsViewport.YOffset = m.lyricViewport.YOffset
+		return m, watchCurrentLyricChanges()
+
+	case overwriteReceived:
+		m.overwrite = string(msg)
+		return m, tea.Batch(watchReceivedOverwrites(), tea.Tick(5*time.Second, func(t time.Time) tea.Msg { return overwriteReceived("") }))
+
+	case tea.WindowSizeMsg:
+		m.w = msg.Width
+		m.lyricLines = make([][]string, 0, len(global.CurrentSong.LyricsData.Lyrics))
+		for _, s := range global.CurrentSong.LyricsData.Lyrics {
+			m.lyricLines = append(m.lyricLines, m.lyricWrap(s))
+		}
+		headerHeight := gloss.Height(m.headerView())
+		footerHeight := gloss.Height(m.footerView())
+		horizontalMargin := gloss.Width(m.timestampsView()) * 2
+		verticalMarginHeight := headerHeight + footerHeight
+		if !m.ready {
+			m.ready = true
+			m.lyricViewport = vp.New(msg.Width-horizontalMargin, msg.Height-verticalMarginHeight)
+			m.lyricViewport.Style = m.lyricViewport.Style.AlignHorizontal(gloss.Center).AlignVertical(gloss.Center)
+			m.timestampsViewport = vp.New(10, msg.Height-verticalMarginHeight)
+			m.timestampsViewport.Style = m.timestampsViewport.Style.BorderRight(true).BorderStyle(gloss.NormalBorder()).BorderForeground(gloss.Color("7"))
+		} else {
+			m.lyricViewport.Width = msg.Width
+			m.lyricViewport.Height = msg.Height - verticalMarginHeight
+			m.timestampsViewport.Width = 10
+			m.timestampsViewport.Height = msg.Height - verticalMarginHeight
+		}
+
+	// Is it a key press?
+	case tea.KeyMsg:
+
+		// Cool, what was the actual key pressed?
+		switch msg.String() {
+
+		// These keys should exit the program.
+		case "ctrl+c", "q":
+			return m, tea.Quit
+
+		// DEBUG
+		case "enter":
+			if !player.PlayerInfoControllers[global.CurrentConfig.Player.PlayerProvider].SeekTo(global.CurrentSong.LyricsData.LyricTimestamps[m.cursor]) {
+				OverwriteReceived <- "Couldn't seek to the lyric!"
+			}
+			return m, nil
+
+		// The "up" and "k" keys move the cursor up
+		case "up", "k":
+			if m.followSync {
+				m.followSync = false
+			}
+			m.cursor--
+			if m.cursor < 0 {
+				m.cursor = 0
+			}
+			m.lyricViewport.SetContent(gloss.PlaceHorizontal(m.lyricViewport.Width, gloss.Center, m.lyricsView()))
+			m.lyricViewport.YOffset = min(m.lyricViewport.TotalLineCount()-m.lyricViewport.Height, max(0, m.calcYOffset(m.cursor)))
+			m.timestampsViewport.SetContent(m.timestampsView())
+			m.timestampsViewport.YOffset = m.lyricViewport.YOffset
+
+		// The "down" and "j" keys move the cursor down
+		case "down", "j":
+			if m.followSync {
+				m.followSync = false
+			}
+			m.cursor++
+			if m.cursor > len(m.lyricLines)-1 {
+				m.cursor = len(m.lyricLines) - 1
+			}
+			m.lyricViewport.SetContent(gloss.PlaceHorizontal(m.lyricViewport.Width, gloss.Center, m.lyricsView()))
+			m.lyricViewport.YOffset = min(m.lyricViewport.TotalLineCount()-m.lyricViewport.Height, max(0, m.calcYOffset(m.cursor)))
+			m.timestampsViewport.SetContent(m.timestampsView())
+			m.timestampsViewport.YOffset = m.lyricViewport.YOffset
+
+		case "f":
+			if global.CurrentSong.LyricsData.LyricsType == 0 {
+				m.followSync = !m.followSync
+				if !m.followSync {
+					m.lyricViewport.YOffset = min(m.lyricViewport.TotalLineCount()-m.lyricViewport.Height, max(0, m.calcYOffset(m.currentLyric)))
+					if m.cursor == -1 {
+						m.cursor = 0
+					}
+				} else {
+					m.cursor = m.currentLyric
+				}
+			}
+			m.lyricViewport.SetContent(gloss.PlaceHorizontal(m.lyricViewport.Width, gloss.Center, m.lyricsView()))
+			m.timestampsViewport.SetContent(m.timestampsView())
+
+		case "t":
+			m.showTimestamps = !m.showTimestamps
+			horizontalMargin := gloss.Width(m.timestampsView()) * 2
+			m.lyricViewport.SetContent(gloss.PlaceHorizontal(m.lyricViewport.Width-horizontalMargin, gloss.Center, m.lyricsView()))
+
+		case "p":
+			m.showProgressBar = !m.showProgressBar
+			if m.showProgressBar {
+				m.lyricViewport.Height -= 2
+				m.timestampsViewport.Height -= 2
+			} else {
+				m.lyricViewport.Height += 2
+				m.timestampsViewport.Height += 2
+			}
+		}
+	}
+
+	return m, nil
+}
+
+func (m model) View() (s string) {
+	if !m.ready {
+		return gloss.NewStyle().AlignVertical(gloss.Center).AlignHorizontal(gloss.Center).Render("Loading...")
+	} else {
+		return gloss.JoinVertical(gloss.Center, m.headerView(), gloss.JoinHorizontal(gloss.Center, m.timestampsViewport.View(), m.lyricViewport.View()), m.footerView())
+	}
+}
+
+func (m model) headerView() string {
+	var title string
+	if m.overwrite != "" {
+		title = gloss.NewStyle().Foreground(gloss.Color("11")).AlignHorizontal(gloss.Center).Render(m.overwrite)
+	} else {
+		title = gloss.NewStyle().Foreground(gloss.Color("15")).AlignHorizontal(gloss.Center).Render(fmt.Sprintf("%s - %s%s", global.CurrentSong.Artist, global.CurrentSong.Title, m.header))
+	}
+	line := strings.Repeat("─", max(0, m.lyricViewport.Width))
+	return gloss.JoinVertical(gloss.Center, title, line)
+}
+
+func (m model) footerView() string {
+	if !m.showProgressBar {
+		return ""
+	}
+	position := gloss.NewStyle().AlignHorizontal(gloss.Left).Render(positionIntoString(global.CurrentPlayer.Position) + " ")
+	duration := gloss.NewStyle().AlignHorizontal(gloss.Right).Render(" " + positionIntoString(global.CurrentSong.Duration))
+	m.progressBar.Empty = ' '
+	m.progressBar.Width = max(0, m.lyricViewport.Width-gloss.Width(position)-gloss.Width(duration))
+	m.progressBar.ShowPercentage = false
+	m.progressBar.SetPercent(global.CurrentPlayer.Position / global.CurrentSong.Duration)
+	return "\n" + gloss.NewStyle().BorderTop(true).BorderStyle(gloss.NormalBorder()).Render(gloss.JoinHorizontal(gloss.Center, position, m.progressBar.View(), duration))
+}
+
+func (m model) lyricsView() string {
+	switch global.CurrentSong.LyricsData.LyricsType {
+	case 5:
+		return "Loading lyrics..."
+	case 0:
+		lines := make([]string, 0, len(m.lyricLines))
+
+		// Iterate over our lyrics
+		for i, lyricLine := range m.lyricLines {
+			line := ""
+			stylizedLyrics := make([]string, 0, len(lyricLine))
+
+			if len(lyricLine) == 1 && lyricLine[0] == "" {
+				lyricLine[0] = "───"
+			}
+
+			if i < m.currentLyric {
+				for _, l := range lyricLine {
+					stylizedLyrics = append(stylizedLyrics, styleBefore.Render(l))
+				}
+				line = gloss.JoinVertical(gloss.Center, stylizedLyrics...)
+			} else if i == m.currentLyric {
+				for _, l := range lyricLine {
+					stylizedLyrics = append(stylizedLyrics, styleCurrent.Render(l))
+				}
+				line = gloss.NewStyle().Margin(1, 0).Render(gloss.JoinVertical(gloss.Center, stylizedLyrics...))
+			} else if i > m.currentLyric {
+				for _, l := range lyricLine {
+					stylizedLyrics = append(stylizedLyrics, styleAfter.Render(l))
+				}
+				line = gloss.JoinVertical(gloss.Center, stylizedLyrics...)
+			}
+
+			if !m.followSync {
+				if i == m.cursor {
+					stylizedLyrics = make([]string, 0, len(lyricLine))
+					if i != m.currentLyric {
+						for _, l := range lyricLine {
+							stylizedLyrics = append(stylizedLyrics, styleCursor.Render(l))
+						}
+						line = gloss.JoinVertical(gloss.Center, stylizedLyrics...)
+					} else {
+						for _, l := range lyricLine {
+							stylizedLyrics = append(stylizedLyrics, styleCurrent.Render(l))
+						}
+						line = gloss.NewStyle().Border(gloss.ThickBorder(), true, false).BorderForeground(gloss.Color("11")).Render(gloss.JoinVertical(gloss.Center, stylizedLyrics...))
+					}
+				}
+			}
+
+			lines = append(lines, line)
+		}
+
+		return gloss.JoinVertical(gloss.Center, lines...)
+	case 1:
+		lines := make([]string, 0, len(m.lyricLines))
+
+		// Iterate over our lyrics
+		for i, lyric := range m.lyricLines {
+			if lyric[0] == "" {
+				lyric[0] = "-"
+			}
+
+			for i, l := range lyric {
+				lyric[i] = styleCurrent.Render(l)
+			}
+			lines = append(lines, gloss.JoinVertical(gloss.Center, lyric...))
+
+			if i == m.cursor {
+				for i, l := range lyric {
+					lyric[i] = styleCursor.Render(l)
+				}
+				lines = append(lines, gloss.JoinVertical(gloss.Center, lyric...))
+			}
+		}
+
+		return gloss.JoinVertical(gloss.Center, lines...)
+	default:
+		return ""
+	}
+}
+
+func (m model) timestampsView() string {
+	if !m.showTimestamps || len(m.lyricLines) <= 1 {
+		return ""
+	}
+
+	lines := make([]string, 0, m.lyricViewport.TotalLineCount())
+	for i, v := range global.CurrentSong.LyricsData.LyricTimestamps {
+		style := styleTimestamp
+		if i == m.cursor {
+			style = styleTimestampCursor
+		}
+		isCurrent := 0
+		if i == m.currentLyric {
+			isCurrent = 1
+		}
+		lines = append(lines, style.Render(strings.Repeat("\n", int(math.Ceil(float64(len(m.lyricLines[i]))/2))+isCurrent-1)+timestampIntoString(v)+strings.Repeat("\n", int(math.Floor(float64(len(m.lyricLines[i]))/2))+isCurrent)))
+	}
+	return gloss.JoinVertical(gloss.Center, lines...)
+}
+
+// func main() {
+// 	t := time.NewTimer(250 * time.Millisecond)
+// 	t1 := time.NewTimer(4 * time.Second)
+// 	t2 := time.NewTimer(7500 * time.Millisecond)
+// 	go func() {
+// 		<-t.C
+// 		LyricsDataChan <- true
+// 		CurrentLyricDataChan <- 0
+// 		<-t1.C
+// 		CurrentLyricDataChan <- 6
+// 		<-t2.C
+// 		CurrentLyricDataChan <- len(Lyrics) - 2
+// 	}()
+// }
+
+func timestampIntoString(t float64) string {
+	i, f := math.Modf(t)
+	return fmt.Sprintf("%02d:%02d.%02d", int(i)/60, int(i)%60, int(math.Round(f*100)))
+}
+
+func positionIntoString(t float64) string {
+	i, _ := math.Modf(t)
+	return fmt.Sprintf("%02d:%02d", int(i)/60, int(i)%60)
+}
+
+func (m model) calcYOffset(l int) (res int) {
+	if l < 0 || l >= len(m.lyricLines) {
+		return 0
+	}
+
+	for i := 0; i < l; i++ {
+		res += len(m.lyricLines[i])
+		if m.currentLyric == i {
+			res += 2
+		}
+	}
+	res = max(0, res-m.lyricViewport.Height/2)
+	return
+}
+
+func (m model) lyricWrap(l string) (res []string) {
+	if gloss.Width(styleCurrent.Render(l)) < m.lyricViewport.Width*2/3 {
+		return []string{l}
+	} else {
+		res = make([]string, 0)
+		words := strings.Split(l, " ")
+		s := strings.Builder{}
+		for i := 0; i < len(words); i++ {
+			if gloss.Width(styleCurrent.Render(s.String()+" "+words[i])) >= m.lyricViewport.Width*2/3 {
+				res = append(res, s.String())
+				s.Reset()
+			}
+
+			s.WriteString(words[i])
+			if i != len(words)-1 {
+				s.WriteString(" ")
+			}
+		}
+		res = append(res, s.String())
+		return res
+	}
+}

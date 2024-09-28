@@ -1,5 +1,5 @@
 package global
 
-import "lrcsnc/pkg/structs"
+import "lrcsnc/internal/pkg/structs"
 
 var CurrentConfig structs.Config
