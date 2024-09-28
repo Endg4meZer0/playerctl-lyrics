@@ -6,9 +6,10 @@ import (
 	"time"
 
 	"lrcsnc/internal/lyrics"
+	"lrcsnc/internal/output"
+	"lrcsnc/internal/pkg/global"
 	"lrcsnc/internal/player"
 	"lrcsnc/internal/romanization"
-	"lrcsnc/pkg/global"
 )
 
 func SyncLoop() {
@@ -27,9 +28,9 @@ func SyncLoop() {
 	go func() {
 		for {
 			<-checkerTicker.C
-			playerData := player.PlayerDataProviders[global.CurrentConfig.Player.PlayerProvider].GetPlayerData()
-			song := player.PlayerDataProviders[global.CurrentConfig.Player.PlayerProvider].GetSongData()
-			if song.Song != global.CurrentSong.Song || song.Artist != global.CurrentSong.Artist || song.Album != global.CurrentSong.Album || song.Duration != global.CurrentSong.Duration {
+			playerData := player.PlayerInfoProviders[global.CurrentConfig.Player.PlayerProvider].GetPlayerInfo()
+			song := player.PlayerInfoProviders[global.CurrentConfig.Player.PlayerProvider].GetSongInfo()
+			if song.Title != global.CurrentSong.Title || song.Artist != global.CurrentSong.Artist || song.Album != global.CurrentSong.Album || song.Duration != global.CurrentSong.Duration {
 				position = playerData.Position
 				timeBeforeGettingLyrics = time.Now()
 				global.CurrentSong = song
@@ -66,15 +67,19 @@ func SyncLoop() {
 		for {
 			<-positionCheckTimer.C
 			var initialPosition float64
-			global.CurrentPlayer = player.PlayerDataProviders[global.CurrentConfig.Player.PlayerProvider].GetPlayerData()
+			global.CurrentPlayer = player.PlayerInfoProviders[global.CurrentConfig.Player.PlayerProvider].GetPlayerInfo()
 			initialPosition = global.CurrentPlayer.Position
 			if global.CurrentPlayer.IsPlaying {
+				if global.CurrentConfig.Global.Output == "tui" {
+					output.PlayerInfoChangedToOutput()
+				}
+
 				if global.CurrentConfig.Global.EnableActiveSync {
 					requiredTicks := 10
 					positionInnerCheckTicker.Reset(100 * time.Millisecond)
 					for i := 0; i < requiredTicks; i++ {
 						<-positionInnerCheckTicker.C
-						global.CurrentPlayer = player.PlayerDataProviders[global.CurrentConfig.Player.PlayerProvider].GetPlayerData()
+						global.CurrentPlayer = player.PlayerInfoProviders[global.CurrentConfig.Player.PlayerProvider].GetPlayerInfo()
 						newPosition := global.CurrentPlayer.Position
 						expectedPosition := (initialPosition + 0.1*(float64(i)+1))
 						diff := newPosition - expectedPosition
@@ -86,7 +91,7 @@ func SyncLoop() {
 				} else {
 					positionInnerCheckTicker.Reset(time.Second)
 					<-positionInnerCheckTicker.C
-					global.CurrentPlayer = player.PlayerDataProviders[global.CurrentConfig.Player.PlayerProvider].GetPlayerData()
+					global.CurrentPlayer = player.PlayerInfoProviders[global.CurrentConfig.Player.PlayerProvider].GetPlayerInfo()
 					newPosition := global.CurrentPlayer.Position
 					diff := newPosition - initialPosition
 					if !(diff >= 0.9 && diff <= 1.1) {
@@ -112,7 +117,7 @@ func SyncLoop() {
 				if global.CurrentConfig.Output.Romanization.IsEnabled() && romanization.IsSupportedAsianLang(lyric) {
 					global.CurrentSong.LyricsData.Lyrics[i] = romanization.Romanize(lyric)
 				}
-				if global.CurrentConfig.Output.ShowRepeatedLyricsMultiplier {
+				if global.CurrentConfig.Output.ShowRepeatedLyricsMultiplier && global.CurrentConfig.Global.Output == "piped" {
 					if lyric == prevLyric && lyric != "" {
 						count++
 					} else {
@@ -143,6 +148,5 @@ func SyncLoop() {
 		}
 	}()
 
-	go WriteLyrics()
-	go WriteInstrumental()
+	go SyncLyrics()
 }

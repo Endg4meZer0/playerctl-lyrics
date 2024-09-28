@@ -12,6 +12,7 @@ type Config struct {
 // LEVEL 1
 
 type GlobalConfig struct {
+	Output           string `json:"output"`
 	LyricsProvider   string `json:"lyricsProvider"`
 	EnableActiveSync bool   `json:"enableActiveSync"`
 }

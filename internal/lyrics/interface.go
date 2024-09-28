@@ -2,11 +2,11 @@ package lyrics
 
 import (
 	lrclib "lrcsnc/internal/lyrics/providers/lrclib"
-	"lrcsnc/pkg/structs"
+	"lrcsnc/internal/pkg/structs"
 )
 
 type LyricsDataProvider interface {
-	GetLyricsData(structs.SongData) structs.SongLyricsData
+	GetLyricsData(structs.SongInfo) structs.SongLyricsData
 }
 
 var LyricsDataProviders map[string]LyricsDataProvider = map[string]LyricsDataProvider{

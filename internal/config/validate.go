@@ -3,7 +3,7 @@ package config
 import (
 	"os/exec"
 
-	"lrcsnc/pkg/structs"
+	"lrcsnc/internal/pkg/structs"
 )
 
 type ConfigError string

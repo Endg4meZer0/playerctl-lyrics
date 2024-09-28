@@ -1,9 +1,10 @@
 package romanization
 
 import (
-	"lrcsnc/pkg/global"
 	"strings"
 	"unicode"
+
+	"lrcsnc/internal/pkg/global"
 
 	jp "github.com/mochi-co/kana-tools"
 	zh "github.com/mozillazg/go-pinyin"

@@ -1,9 +1,10 @@
 package config
 
-import "lrcsnc/pkg/structs"
+import "lrcsnc/internal/pkg/structs"
 
 var defaultConfig = structs.Config{
 	Global: structs.GlobalConfig{
+		Output:           "tui",
 		LyricsProvider:   "lrclib",
 		EnableActiveSync: false,
 	},
