@@ -56,7 +56,7 @@ func (p PlayerctlPlayerProvider) GetPlayerInfo() (out structs.PlayerInfo) {
 	}
 	output, _ := cmd.CombinedOutput()
 	soutput := strings.Split(string(output), "\n")
-	if soutput[1] != "Stopped" {
+	if soutput[1] != "Stopped" && soutput[1] != "" {
 		out.PlayerName = soutput[0]
 		durationInt, err := strconv.ParseInt(soutput[2], 10, 64)
 		if err == nil {
