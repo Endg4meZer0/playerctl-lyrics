@@ -2,6 +2,7 @@ package config
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"os"
 
@@ -34,7 +35,7 @@ func ReadConfig(path string) error {
 		global.CurrentConfig = config
 		currentConfigPath = path
 	} else {
-		return ConfigError("FATAL ERRORS IN THE CONFIG WERE DETECTED! Rolling back...")
+		return fmt.Errorf("FATAL ERRORS IN THE CONFIG WERE DETECTED! Rolling back... ")
 	}
 
 	return nil
@@ -84,7 +85,7 @@ func ReadConfigFromDefaultPath() error {
 		if !fatal {
 			global.CurrentConfig = config
 		} else {
-			return ConfigError("FATAL ERRORS IN THE CONFIG WERE DETECTED! Rolling back...")
+			return fmt.Errorf("FATAL ERRORS IN THE CONFIG WERE DETECTED! Rolling back... ")
 		}
 	}
 

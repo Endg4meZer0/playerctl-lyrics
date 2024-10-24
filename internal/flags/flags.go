@@ -62,10 +62,6 @@ func HandleFlags() {
 		}
 	}
 
-	if global.CurrentConfig.Output.TerminalOutputInOneLine {
-		fmt.Println()
-	}
-
 	if *cacheDirectory != "" {
 		if _, err := os.ReadDir(os.ExpandEnv(*cacheDirectory)); err != nil {
 			os.MkdirAll(*cacheDirectory, 0777)

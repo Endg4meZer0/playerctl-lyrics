@@ -125,10 +125,10 @@ func SyncLoop() {
 			for i, lyric := range global.CurrentSong.LyricsData.Lyrics {
 				lyric = strings.TrimSpace(lyric)
 
-				if global.CurrentConfig.Output.Romanization.IsEnabled() && romanization.IsSupportedAsianLang(lyric) {
+				if global.CurrentConfig.Lyrics.Romanization.IsEnabled() && romanization.IsSupportedAsianLang(lyric) {
 					lyric = romanization.Romanize(lyric)
 				}
-				if global.CurrentConfig.Output.ShowRepeatedLyricsMultiplier && global.CurrentConfig.Global.Output == "piped" {
+				if global.CurrentConfig.Global.Output == "piped" && global.CurrentConfig.Output.Piped.ShowRepeatedLyricsMultiplier {
 					if lyric == prevLyric && lyric != "" {
 						count++
 					} else {
@@ -137,10 +137,10 @@ func SyncLoop() {
 					}
 
 					if count != 1 {
-						if global.CurrentConfig.Output.PrintRepeatedLyricsMultiplierToTheRight {
-							lyric = fmt.Sprintf(lyric+" "+global.CurrentConfig.Output.RepeatedLyricsMultiplierFormat, count)
+						if global.CurrentConfig.Output.Piped.PrintRepeatedLyricsMultiplierToTheRight {
+							lyric = fmt.Sprintf(lyric+" "+global.CurrentConfig.Output.Piped.RepeatedLyricsMultiplierFormat, count)
 						} else {
-							lyric = fmt.Sprintf(global.CurrentConfig.Output.RepeatedLyricsMultiplierFormat+" "+lyric, count)
+							lyric = fmt.Sprintf(global.CurrentConfig.Output.Piped.RepeatedLyricsMultiplierFormat+" "+lyric, count)
 						}
 					}
 				}
@@ -148,9 +148,9 @@ func SyncLoop() {
 				global.CurrentSong.LyricsData.Lyrics[i] = lyric
 			}
 
-			if global.CurrentConfig.Output.TimestampOffset != 0 {
+			if global.CurrentConfig.Lyrics.TimestampOffset != 0 {
 				for i, timestamp := range global.CurrentSong.LyricsData.LyricTimestamps {
-					global.CurrentSong.LyricsData.LyricTimestamps[i] = timestamp + (float64(global.CurrentConfig.Output.TimestampOffset) / 1000)
+					global.CurrentSong.LyricsData.LyricTimestamps[i] = timestamp + global.CurrentConfig.Lyrics.TimestampOffset
 				}
 			}
 

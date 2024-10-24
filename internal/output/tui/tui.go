@@ -57,21 +57,10 @@ func InitialModel() model {
 		position: int(global.CurrentPlayer.Position),
 		duration: int(global.CurrentSong.Duration),
 
-		progressBar: progress.New(progress.WithSolidFill("10")),
+		progressBar: progress.New(progress.WithSolidFill(global.CurrentConfig.Output.TUI.Colors.ProgressBarColor)),
 		help:        helpModel,
 	}
 }
-
-var (
-	styleLyric            = gloss.NewStyle().AlignHorizontal(gloss.Center).Bold(true)
-	styleBefore           = styleLyric.Foreground(gloss.Color("15"))
-	styleCurrent          = styleLyric.Foreground(gloss.Color("11"))
-	styleAfter            = styleLyric.Foreground(gloss.Color("15")).Faint(true)
-	styleCursor           = styleLyric.Foreground(gloss.Color("3"))
-	styleTimestamp        = gloss.NewStyle().Foreground(gloss.Color("8"))
-	styleTimestampCurrent = gloss.NewStyle().Foreground(gloss.Color("3"))
-	styleTimestampCursor  = gloss.NewStyle().Foreground(gloss.Color("3")).Faint(true)
-)
 
 type animateProgressBarTick bool
 
@@ -304,17 +293,17 @@ func (m model) lyricsView() string {
 
 			if i < m.currentLyric {
 				for _, l := range lyricLine {
-					stylizedLyrics = append(stylizedLyrics, styleBefore.Render(l))
+					stylizedLyrics = append(stylizedLyrics, styleBefore().Render(l))
 				}
 				line = gloss.JoinVertical(gloss.Center, stylizedLyrics...)
 			} else if i == m.currentLyric {
 				for _, l := range lyricLine {
-					stylizedLyrics = append(stylizedLyrics, styleCurrent.Render(l))
+					stylizedLyrics = append(stylizedLyrics, styleCurrent().Render(l))
 				}
 				line = gloss.NewStyle().Margin(1, 0).Render(gloss.JoinVertical(gloss.Center, stylizedLyrics...))
 			} else if i > m.currentLyric {
 				for _, l := range lyricLine {
-					stylizedLyrics = append(stylizedLyrics, styleAfter.Render(l))
+					stylizedLyrics = append(stylizedLyrics, styleAfter().Render(l))
 				}
 				line = gloss.JoinVertical(gloss.Center, stylizedLyrics...)
 			}
@@ -324,12 +313,12 @@ func (m model) lyricsView() string {
 					stylizedLyrics = make([]string, 0, len(lyricLine))
 					if i == m.currentLyric && global.CurrentSong.LyricsData.LyricsType == 0 {
 						for _, l := range lyricLine {
-							stylizedLyrics = append(stylizedLyrics, styleCurrent.Render(l))
+							stylizedLyrics = append(stylizedLyrics, styleCurrent().Render(l))
 						}
 						line = gloss.JoinVertical(gloss.Center, stylizedLyrics...)
 					} else {
 						for _, l := range lyricLine {
-							stylizedLyrics = append(stylizedLyrics, styleCursor.Render(l))
+							stylizedLyrics = append(stylizedLyrics, styleCursor().Render(l))
 						}
 						line = gloss.JoinVertical(gloss.Center, stylizedLyrics...)
 					}
@@ -338,11 +327,11 @@ func (m model) lyricsView() string {
 
 			var timestampView string = ""
 			if m.showTimestamps {
-				style := styleTimestamp
+				style := styleTimestamp()
 				if i == m.cursor && i == m.currentLyric {
-					style = styleTimestampCurrent
+					style = styleTimestampCurrent()
 				} else if i == m.cursor {
-					style = styleTimestampCursor
+					style = styleTimestampCursor()
 				}
 				timestampView = style.Render(timestampIntoString(global.CurrentSong.LyricsData.LyricTimestamps[i])) + " "
 			}
@@ -350,7 +339,7 @@ func (m model) lyricsView() string {
 			line = gloss.JoinHorizontal(gloss.Center, timestampView, line)
 
 			if i == m.currentLyric && i == m.cursor && !m.followSync && global.CurrentSong.LyricsData.LyricsType == 0 {
-				line = gloss.NewStyle().Border(gloss.ThickBorder(), true, false).BorderForeground(gloss.Color("3")).Render(line)
+				line = styleBorderCursor().Render(line)
 			}
 
 			lines = append(lines, line)
@@ -370,13 +359,13 @@ func (m model) lyricsView() string {
 			}
 
 			for _, l := range lyricLine {
-				stylizedLyrics = append(stylizedLyrics, styleBefore.Render(l))
+				stylizedLyrics = append(stylizedLyrics, styleBefore().Render(l))
 			}
 
 			if i == m.cursor {
 				stylizedLyrics = make([]string, 0, len(lyricLine))
 				for _, l := range lyricLine {
-					stylizedLyrics = append(stylizedLyrics, styleCursor.Render(l))
+					stylizedLyrics = append(stylizedLyrics, styleCursor().Render(l))
 				}
 				line = gloss.JoinVertical(gloss.Center, stylizedLyrics...)
 			} else {
@@ -435,14 +424,14 @@ func (m model) calcYOffset(l int) (res int) {
 }
 
 func (m model) lyricWrap(l string) (res []string) {
-	if gloss.Width(styleCurrent.Render(l)) < m.lyricViewport.Width*3/4 {
+	if gloss.Width(styleCurrent().Render(l)) < m.lyricViewport.Width*3/4 {
 		return []string{l}
 	} else {
 		res = make([]string, 0)
 		words := strings.Split(l, " ")
 		s := strings.Builder{}
 		for i := 0; i < len(words); i++ {
-			if gloss.Width(styleCurrent.Render(s.String()+" "+words[i])) >= m.lyricViewport.Width*2/3 {
+			if gloss.Width(styleCurrent().Render(s.String()+" "+words[i])) >= m.lyricViewport.Width*2/3 {
 				res = append(res, s.String())
 				s.Reset()
 			}

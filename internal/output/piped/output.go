@@ -16,26 +16,26 @@ var writeInstrumental bool = false
 
 func Init() {
 	i := 1
-	instrTimer.Reset(time.Duration(global.CurrentConfig.Output.Instrumental.Interval*1000) * time.Millisecond)
+	instrTimer.Reset(time.Duration(global.CurrentConfig.Output.Piped.Instrumental.Interval*1000) * time.Millisecond)
 	for {
 		<-instrTimer.C
-		note := global.CurrentConfig.Output.Instrumental.Symbol
-		j := int(global.CurrentConfig.Output.Instrumental.MaxCount + 1)
+		note := global.CurrentConfig.Output.Piped.Instrumental.Symbol
+		j := int(global.CurrentConfig.Output.Piped.Instrumental.MaxCount + 1)
 
 		// Only update instrumental stuff if the song is playing
 		if global.CurrentPlayer.IsPlaying && writeInstrumental {
 			stringToPrint := ""
 			switch global.CurrentSong.LyricsData.LyricsType {
 			case 1:
-				if global.CurrentConfig.Output.ShowNotSyncedLyricsWarning {
+				if global.CurrentConfig.Output.Piped.ShowNotSyncedLyricsWarning {
 					stringToPrint += "This song's lyrics are not synced on LrcLib! "
 				}
 			case 3:
-				if global.CurrentConfig.Output.ShowSongNotFoundWarning {
+				if global.CurrentConfig.Output.Piped.ShowSongNotFoundWarning {
 					stringToPrint += "This song was not found on LrcLib! "
 				}
 			case 5:
-				if global.CurrentConfig.Output.ShowGettingLyricsMessage {
+				if global.CurrentConfig.Output.Piped.ShowGettingLyricsMessage {
 					stringToPrint += "Getting lyrics... "
 				}
 			case 6:
@@ -52,7 +52,7 @@ func Init() {
 				i = 1
 			}
 		}
-		instrTimer.Reset(time.Duration(global.CurrentConfig.Output.Instrumental.Interval*1000) * time.Millisecond)
+		instrTimer.Reset(time.Duration(global.CurrentConfig.Output.Piped.Instrumental.Interval*1000) * time.Millisecond)
 	}
 }
 
