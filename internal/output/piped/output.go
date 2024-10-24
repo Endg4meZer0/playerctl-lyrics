@@ -16,7 +16,7 @@ var writeInstrumental bool = false
 
 func Init() {
 	i := 1
-	instrTimer.Reset(time.Duration(global.CurrentConfig.Output.Instrumental.Interval) * time.Millisecond)
+	instrTimer.Reset(time.Duration(global.CurrentConfig.Output.Instrumental.Interval*1000) * time.Millisecond)
 	for {
 		<-instrTimer.C
 		note := global.CurrentConfig.Output.Instrumental.Symbol
@@ -52,7 +52,7 @@ func Init() {
 				i = 1
 			}
 		}
-		instrTimer.Reset(time.Duration(global.CurrentConfig.Output.Instrumental.Interval) * time.Millisecond)
+		instrTimer.Reset(time.Duration(global.CurrentConfig.Output.Instrumental.Interval*1000) * time.Millisecond)
 	}
 }
 

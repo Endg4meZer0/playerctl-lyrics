@@ -41,7 +41,7 @@ func OverwriteToOutput(s string) {
 // util
 
 func lyricIndexToString(l int) string {
-	if l < 0 || l >= len(global.CurrentSong.LyricsData.Lyrics) || global.CurrentSong.LyricsData.Lyrics[l] == "" {
+	if l < 0 || l >= len(global.CurrentSong.LyricsData.Lyrics) {
 		return ""
 	} else {
 		return global.CurrentSong.LyricsData.Lyrics[l]

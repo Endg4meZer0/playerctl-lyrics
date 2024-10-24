@@ -9,7 +9,7 @@ import (
 	"lrcsnc/internal/player"
 )
 
-var lyricsTimer = time.NewTimer(5 * time.Minute)
+var lyricsTimer = time.NewTimer(5 * time.Second)
 var currentPosition = 0.0
 var writtenTimestamp = 0.0
 

@@ -87,9 +87,11 @@ func (l LrcLibLyricsProvider) GetLyricsData(song structs.SongInfo) (out structs.
 	}
 
 	if global.CurrentConfig.Cache.Enabled && out.LyricsType != 1 {
-		if err := cache.StoreCachedLyrics(song, out); err != nil {
-			log.Println("Could not save the lyrics to the cache! Are there writing perms?")
-		}
+		defer func() {
+			if cache.StoreCachedLyrics(song, out) != nil {
+				log.Println("Could not save the lyrics to the cache! Is there an issue with perms?")
+			}
+		}()
 	}
 
 	return

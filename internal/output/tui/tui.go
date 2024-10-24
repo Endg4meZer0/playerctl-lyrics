@@ -30,9 +30,8 @@ type model struct {
 
 	w int
 
-	lyricViewport      vp.Model
-	timestampsViewport vp.Model
-	progressBar        progress.Model
+	lyricViewport vp.Model
+	progressBar   progress.Model
 }
 
 func InitialModel() model {
@@ -45,7 +44,7 @@ func InitialModel() model {
 		currentLyric:    -1,
 		cursor:          -1,
 		followSync:      true,
-		showTimestamps:  true,
+		showTimestamps:  false,
 		showProgressBar: true,
 
 		progressBar: progress.New(progress.WithSolidFill("10")),
@@ -58,8 +57,8 @@ var (
 	styleCurrent         = styleLyric.Foreground(gloss.Color("15"))
 	styleAfter           = styleLyric.Foreground(gloss.Color("8"))
 	styleCursor          = styleLyric.Foreground(gloss.Color("11"))
-	styleTimestamp       = gloss.NewStyle().Foreground(gloss.Color("15")).Faint(true)
-	styleTimestampCursor = gloss.NewStyle().Foreground(gloss.Color("11"))
+	styleTimestamp       = gloss.NewStyle().Foreground(gloss.Color("0")).Faint(true)
+	styleTimestampCursor = gloss.NewStyle().Foreground(gloss.Color("3"))
 )
 
 func (m model) Init() tea.Cmd {
@@ -96,9 +95,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.header = ""
 		}
 		m.lyricViewport.SetContent(gloss.PlaceHorizontal(m.lyricViewport.Width, gloss.Center, m.lyricsView()))
-		m.timestampsViewport.SetContent(m.timestampsView())
-		m.lyricViewport.YOffset = 0
-		m.timestampsViewport.YOffset = 0
+		m.lyricViewport.SetYOffset(m.lyricViewport.Height)
 		if global.CurrentSong.LyricsData.LyricsType != 0 {
 			m.followSync = false
 			m.currentLyric = -1
@@ -115,9 +112,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.cursor = m.currentLyric
 		}
 		m.lyricViewport.SetContent(gloss.PlaceHorizontal(m.lyricViewport.Width, gloss.Center, m.lyricsView()))
-		m.timestampsViewport.SetContent(m.timestampsView())
 		m.lyricViewport.YOffset = min(m.lyricViewport.TotalLineCount()-m.lyricViewport.Height, max(0, m.calcYOffset(m.cursor)))
-		m.timestampsViewport.YOffset = m.lyricViewport.YOffset
 		return m, watchCurrentLyricChanges()
 
 	case overwriteReceived:
@@ -132,20 +127,16 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		headerHeight := gloss.Height(m.headerView())
 		footerHeight := gloss.Height(m.footerView())
-		horizontalMargin := gloss.Width(m.timestampsView()) * 2
 		verticalMarginHeight := headerHeight + footerHeight
 		if !m.ready {
 			m.ready = true
-			m.lyricViewport = vp.New(msg.Width-horizontalMargin, msg.Height-verticalMarginHeight)
+			m.lyricViewport = vp.New(msg.Width, msg.Height-verticalMarginHeight)
 			m.lyricViewport.Style = m.lyricViewport.Style.AlignHorizontal(gloss.Center).AlignVertical(gloss.Center)
-			m.timestampsViewport = vp.New(10, msg.Height-verticalMarginHeight)
-			m.timestampsViewport.Style = m.timestampsViewport.Style.BorderRight(true).BorderStyle(gloss.NormalBorder()).BorderForeground(gloss.Color("7"))
 		} else {
 			m.lyricViewport.Width = msg.Width
 			m.lyricViewport.Height = msg.Height - verticalMarginHeight
-			m.timestampsViewport.Width = 10
-			m.timestampsViewport.Height = msg.Height - verticalMarginHeight
 		}
+		m.lyricViewport.SetContent(gloss.PlaceHorizontal(m.lyricViewport.Width, gloss.Center, m.lyricsView()))
 
 	// Is it a key press?
 	case tea.KeyMsg:
@@ -174,9 +165,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.cursor = 0
 			}
 			m.lyricViewport.SetContent(gloss.PlaceHorizontal(m.lyricViewport.Width, gloss.Center, m.lyricsView()))
-			m.lyricViewport.YOffset = min(m.lyricViewport.TotalLineCount()-m.lyricViewport.Height, max(0, m.calcYOffset(m.cursor)))
-			m.timestampsViewport.SetContent(m.timestampsView())
-			m.timestampsViewport.YOffset = m.lyricViewport.YOffset
+			m.lyricViewport.SetYOffset(min(m.lyricViewport.TotalLineCount()-m.lyricViewport.Height, max(0, m.calcYOffset(m.cursor))))
 
 		// The "down" and "j" keys move the cursor down
 		case "down", "j":
@@ -188,15 +177,12 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.cursor = len(m.lyricLines) - 1
 			}
 			m.lyricViewport.SetContent(gloss.PlaceHorizontal(m.lyricViewport.Width, gloss.Center, m.lyricsView()))
-			m.lyricViewport.YOffset = min(m.lyricViewport.TotalLineCount()-m.lyricViewport.Height, max(0, m.calcYOffset(m.cursor)))
-			m.timestampsViewport.SetContent(m.timestampsView())
-			m.timestampsViewport.YOffset = m.lyricViewport.YOffset
+			m.lyricViewport.SetYOffset(min(m.lyricViewport.TotalLineCount()-m.lyricViewport.Height, max(0, m.calcYOffset(m.cursor))))
 
 		case "f":
 			if global.CurrentSong.LyricsData.LyricsType == 0 {
 				m.followSync = !m.followSync
 				if !m.followSync {
-					m.lyricViewport.YOffset = min(m.lyricViewport.TotalLineCount()-m.lyricViewport.Height, max(0, m.calcYOffset(m.currentLyric)))
 					if m.cursor == -1 {
 						m.cursor = 0
 					}
@@ -205,21 +191,18 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 			}
 			m.lyricViewport.SetContent(gloss.PlaceHorizontal(m.lyricViewport.Width, gloss.Center, m.lyricsView()))
-			m.timestampsViewport.SetContent(m.timestampsView())
+			m.lyricViewport.SetYOffset(min(m.lyricViewport.TotalLineCount()-m.lyricViewport.Height, max(0, m.calcYOffset(m.cursor))))
 
 		case "t":
 			m.showTimestamps = !m.showTimestamps
-			horizontalMargin := gloss.Width(m.timestampsView()) * 2
-			m.lyricViewport.SetContent(gloss.PlaceHorizontal(m.lyricViewport.Width-horizontalMargin, gloss.Center, m.lyricsView()))
+			m.lyricViewport.SetContent(gloss.PlaceHorizontal(m.lyricViewport.Width, gloss.Center, m.lyricsView()))
 
 		case "p":
 			m.showProgressBar = !m.showProgressBar
 			if m.showProgressBar {
 				m.lyricViewport.Height -= 2
-				m.timestampsViewport.Height -= 2
 			} else {
 				m.lyricViewport.Height += 2
-				m.timestampsViewport.Height += 2
 			}
 		}
 	}
@@ -231,7 +214,7 @@ func (m model) View() (s string) {
 	if !m.ready {
 		return gloss.NewStyle().AlignVertical(gloss.Center).AlignHorizontal(gloss.Center).Render("Loading...")
 	} else {
-		return gloss.JoinVertical(gloss.Center, m.headerView(), gloss.JoinHorizontal(gloss.Center, m.timestampsViewport.View(), m.lyricViewport.View()), m.footerView())
+		return gloss.JoinVertical(gloss.Center, m.headerView(), m.lyricViewport.View(), m.footerView())
 	}
 }
 
@@ -295,18 +278,33 @@ func (m model) lyricsView() string {
 			if !m.followSync {
 				if i == m.cursor {
 					stylizedLyrics = make([]string, 0, len(lyricLine))
-					if i != m.currentLyric {
+					if i == m.currentLyric && global.CurrentSong.LyricsData.LyricsType == 0 {
 						for _, l := range lyricLine {
-							stylizedLyrics = append(stylizedLyrics, styleCursor.Render(l))
+							stylizedLyrics = append(stylizedLyrics, styleCurrent.Render(l))
 						}
 						line = gloss.JoinVertical(gloss.Center, stylizedLyrics...)
 					} else {
 						for _, l := range lyricLine {
-							stylizedLyrics = append(stylizedLyrics, styleCurrent.Render(l))
+							stylizedLyrics = append(stylizedLyrics, styleCursor.Render(l))
 						}
-						line = gloss.NewStyle().Border(gloss.ThickBorder(), true, false).BorderForeground(gloss.Color("11")).Render(gloss.JoinVertical(gloss.Center, stylizedLyrics...))
+						line = gloss.JoinVertical(gloss.Center, stylizedLyrics...)
 					}
 				}
+			}
+
+			var timestampView string = ""
+			if m.showTimestamps {
+				style := styleTimestamp
+				if i == m.cursor {
+					style = styleTimestampCursor
+				}
+				timestampView = style.Render(timestampIntoString(global.CurrentSong.LyricsData.LyricTimestamps[i])) + " "
+			}
+
+			line = gloss.JoinHorizontal(gloss.Center, timestampView, line)
+
+			if i == m.currentLyric && i == m.cursor && !m.followSync && global.CurrentSong.LyricsData.LyricsType == 0 {
+				line = gloss.NewStyle().Border(gloss.ThickBorder(), true, false).BorderForeground(gloss.Color("11")).Render(line)
 			}
 
 			lines = append(lines, line)
@@ -339,26 +337,6 @@ func (m model) lyricsView() string {
 	default:
 		return ""
 	}
-}
-
-func (m model) timestampsView() string {
-	if !m.showTimestamps || len(m.lyricLines) <= 1 {
-		return ""
-	}
-
-	lines := make([]string, 0, m.lyricViewport.TotalLineCount())
-	for i, v := range global.CurrentSong.LyricsData.LyricTimestamps {
-		style := styleTimestamp
-		if i == m.cursor {
-			style = styleTimestampCursor
-		}
-		isCurrent := 0
-		if i == m.currentLyric {
-			isCurrent = 1
-		}
-		lines = append(lines, style.Render(strings.Repeat("\n", int(math.Ceil(float64(len(m.lyricLines[i]))/2))+isCurrent-1)+timestampIntoString(v)+strings.Repeat("\n", int(math.Floor(float64(len(m.lyricLines[i]))/2))+isCurrent)))
-	}
-	return gloss.JoinVertical(gloss.Center, lines...)
 }
 
 // func main() {
@@ -397,7 +375,10 @@ func (m model) calcYOffset(l int) (res int) {
 			res += 2
 		}
 	}
-	res = max(0, res-m.lyricViewport.Height/2)
+	if m.cursor == m.currentLyric {
+		res += 1
+	}
+	res = max(0, res-int(math.Ceil(float64(m.lyricViewport.Height)/2)-1))
 	return
 }
 
