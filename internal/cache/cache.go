@@ -11,7 +11,7 @@ import (
 
 	"lrcsnc/internal/pkg/global"
 	"lrcsnc/internal/pkg/structs"
-	"lrcsnc/internal/util"
+	"lrcsnc/internal/pkg/util"
 )
 
 func GetCachedLyrics(song structs.SongInfo) (structs.SongLyricsData, bool) {

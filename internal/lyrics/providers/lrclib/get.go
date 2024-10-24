@@ -13,7 +13,7 @@ import (
 	"lrcsnc/internal/cache"
 	"lrcsnc/internal/pkg/global"
 	"lrcsnc/internal/pkg/structs"
-	"lrcsnc/internal/util"
+	"lrcsnc/internal/pkg/util"
 )
 
 type LrcLibLyricsProvider struct{}

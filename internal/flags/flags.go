@@ -11,7 +11,7 @@ import (
 	"lrcsnc/internal/config"
 	"lrcsnc/internal/output/piped"
 	"lrcsnc/internal/pkg/global"
-	"lrcsnc/internal/util"
+	"lrcsnc/internal/pkg/util"
 )
 
 var helpText = []string{
