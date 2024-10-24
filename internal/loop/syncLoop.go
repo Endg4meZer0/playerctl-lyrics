@@ -3,6 +3,7 @@ package loop
 import (
 	"fmt"
 	"math"
+	"strings"
 	"time"
 
 	"lrcsnc/internal/lyrics"
@@ -13,16 +14,24 @@ import (
 )
 
 func SyncLoop() {
+	// Channels to communicate between goroutines
+	songChanged := make(chan bool, 1)
+	fullLyrChan := make(chan bool, 1)
+
+	// Initial player data
+	global.CurrentPlayer = player.PlayerInfoProviders[global.CurrentConfig.Player.PlayerProvider].GetPlayerInfo()
+	global.CurrentSong = player.PlayerInfoProviders[global.CurrentConfig.Player.PlayerProvider].GetSongInfo()
+	songChanged <- true
+
+	// Set up timers and tickers
 	checkerTicker := time.NewTicker(time.Duration(global.CurrentConfig.Player.SongCheckInterval*1000) * time.Millisecond)
 	positionCheckTimer := time.NewTimer(time.Second)
 	positionInnerCheckTicker := time.NewTicker(time.Second)
 	positionInnerCheckTicker.Stop()
 
+	// Some additional syncing variables to make up for the time spent on getting the data itself
 	position := 0.0
 	var timeBeforeGettingLyrics time.Time
-
-	songChanged := make(chan bool, 1)
-	fullLyrChan := make(chan bool, 1)
 
 	// Goroutine to check for changes in currently playing song
 	go func() {
@@ -44,6 +53,8 @@ func SyncLoop() {
 	go func() {
 		for {
 			<-songChanged
+
+			output.OutputControllers[global.CurrentConfig.Global.Output].OnSongInfoChange()
 
 			// If the duration equals 0s, then there are no supported players out there.
 			if global.CurrentSong.Duration == 0 {
@@ -70,10 +81,6 @@ func SyncLoop() {
 			global.CurrentPlayer = player.PlayerInfoProviders[global.CurrentConfig.Player.PlayerProvider].GetPlayerInfo()
 			initialPosition = global.CurrentPlayer.Position
 			if global.CurrentPlayer.IsPlaying {
-				if global.CurrentConfig.Global.Output == "tui" {
-					output.PlayerInfoChangedToOutput()
-				}
-
 				if global.CurrentConfig.Global.EnableActiveSync {
 					requiredTicks := 10
 					positionInnerCheckTicker.Reset(100 * time.Millisecond)
@@ -84,6 +91,7 @@ func SyncLoop() {
 						expectedPosition := (initialPosition + 0.1*(float64(i)+1))
 						diff := newPosition - expectedPosition
 						if !(((diff <= 0.21 && diff >= -1.11) || (diff >= 0.89 && diff <= 1.01)) || !global.CurrentPlayer.IsPlaying) {
+							output.OutputControllers[global.CurrentConfig.Global.Output].OnPlayerInfoChange()
 							UpdatePosition(newPosition)
 							break
 						}
@@ -95,6 +103,7 @@ func SyncLoop() {
 					newPosition := global.CurrentPlayer.Position
 					diff := newPosition - initialPosition
 					if !(diff >= 0.9 && diff <= 1.1) {
+						output.OutputControllers[global.CurrentConfig.Global.Output].OnPlayerInfoChange()
 						UpdatePosition(newPosition)
 					}
 				}
@@ -114,8 +123,10 @@ func SyncLoop() {
 			prevLyric := ""
 			count := 1
 			for i, lyric := range global.CurrentSong.LyricsData.Lyrics {
+				lyric = strings.TrimSpace(lyric)
+
 				if global.CurrentConfig.Output.Romanization.IsEnabled() && romanization.IsSupportedAsianLang(lyric) {
-					global.CurrentSong.LyricsData.Lyrics[i] = romanization.Romanize(lyric)
+					lyric = romanization.Romanize(lyric)
 				}
 				if global.CurrentConfig.Output.ShowRepeatedLyricsMultiplier && global.CurrentConfig.Global.Output == "piped" {
 					if lyric == prevLyric && lyric != "" {
@@ -127,12 +138,14 @@ func SyncLoop() {
 
 					if count != 1 {
 						if global.CurrentConfig.Output.PrintRepeatedLyricsMultiplierToTheRight {
-							global.CurrentSong.LyricsData.Lyrics[i] = fmt.Sprintf(lyric+" "+global.CurrentConfig.Output.RepeatedLyricsMultiplierFormat, count)
+							lyric = fmt.Sprintf(lyric+" "+global.CurrentConfig.Output.RepeatedLyricsMultiplierFormat, count)
 						} else {
-							global.CurrentSong.LyricsData.Lyrics[i] = fmt.Sprintf(global.CurrentConfig.Output.RepeatedLyricsMultiplierFormat+" "+lyric, count)
+							lyric = fmt.Sprintf(global.CurrentConfig.Output.RepeatedLyricsMultiplierFormat+" "+lyric, count)
 						}
 					}
 				}
+
+				global.CurrentSong.LyricsData.Lyrics[i] = lyric
 			}
 
 			if global.CurrentConfig.Output.TimestampOffset != 0 {
@@ -141,6 +154,8 @@ func SyncLoop() {
 				}
 			}
 
+			output.OutputControllers[global.CurrentConfig.Global.Output].OnSongInfoChange()
+
 			timeAfterGettingLyrics := time.Now()
 			position += math.Max(timeAfterGettingLyrics.Sub(timeBeforeGettingLyrics).Seconds(), 0) + 0.1 // tests have shown that additional 0.1 is required to look good
 
@@ -148,5 +163,6 @@ func SyncLoop() {
 		}
 	}()
 
+	// Launch the goroutine for lyrics syncing
 	go SyncLyrics()
 }

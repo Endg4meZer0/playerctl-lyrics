@@ -37,10 +37,9 @@ func (m MprisPlayerController) SeekTo(pos float64) bool {
 		return false
 	}
 
-	// Handling MPRIS directly is not fail-safe, so to prevent various crashes there is a recover defer.
+	// Handling MPRIS directly is not really fail-safe, so to prevent any panics from reaching the main program there is a recover defer.
 	defer func() {
-		if r := recover(); r != nil {
-		}
+		_ = recover()
 	}()
 
 	conn := InitConn()

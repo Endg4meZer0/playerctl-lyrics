@@ -23,7 +23,7 @@ func SyncLyrics() {
 		for {
 			<-lyricsTimer.C
 			if global.CurrentSong.LyricsData.LyricsType >= 2 {
-				output.CurrentLyricToOutput(-1)
+				output.OutputControllers[global.CurrentConfig.Global.Output].DisplayCurrentLyric(-1)
 			} else {
 				playerData := player.PlayerInfoProviders[global.CurrentConfig.Player.PlayerProvider].GetPlayerInfo()
 
@@ -50,7 +50,7 @@ func SyncLyrics() {
 				lyricsTimerDuration := time.Duration(int64(math.Abs(nextLyricTimestamp-currentPosition-0.01)*1000)) * time.Millisecond // tests have shown that it slows down and starts to mismatch without additional 0.01 offset
 
 				if currentLyricTimestamp == -1 || (global.CurrentPlayer.IsPlaying && writtenTimestamp != currentLyricTimestamp) {
-					output.CurrentLyricToOutput(timestampIndex)
+					output.OutputControllers[global.CurrentConfig.Global.Output].DisplayCurrentLyric(timestampIndex)
 				}
 
 				writtenTimestamp = currentLyricTimestamp

@@ -41,10 +41,9 @@ func (m MprisPlayerProvider) GetSongInfo() (out structs.SongInfo) {
 		return
 	}
 
-	// Handling MPRIS directly is not fail-safe, so to prevent various crashes there is a recover defer.
+	// Handling MPRIS directly is not really fail-safe, so to prevent any panics from reaching the main program there is a recover defer.
 	defer func() {
-		if r := recover(); r != nil {
-		}
+		_ = recover()
 	}()
 
 	conn := InitConn()
@@ -84,10 +83,10 @@ func (m MprisPlayerProvider) GetSongInfo() (out structs.SongInfo) {
 }
 
 func (m MprisPlayerProvider) GetPlayerInfo() (out structs.PlayerInfo) {
-	// Handling MPRIS directly is not fail-safe, so to prevent various crashes there is a recover defer.
+
+	// Handling MPRIS directly is not really fail-safe, so to prevent any panics from reaching the main program there is a recover defer.
 	defer func() {
-		if r := recover(); r != nil {
-		}
+		_ = recover()
 	}()
 
 	conn := InitConn()
