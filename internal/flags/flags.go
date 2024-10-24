@@ -8,10 +8,10 @@ import (
 	"regexp"
 	"strings"
 
-	"lrcsnc/config"
-	"lrcsnc/internal/output"
+	"lrcsnc/internal/config"
+	"lrcsnc/internal/output/piped"
+	"lrcsnc/internal/pkg/global"
 	"lrcsnc/internal/util"
-	"lrcsnc/pkg/global"
 )
 
 var helpText = []string{
@@ -25,7 +25,8 @@ var helpText = []string{
 func HandleFlags() {
 	configPath := flag.String("config", "", "Sets the config file to use")
 	cacheDirectory := flag.String("cache-dir", "", "Sets the cache directory")
-	outputFilePath := flag.String("output", "", "Sets an output file to use instead of standard output")
+	isPiped := flag.Bool("piped", false, "Pipe the output to stdout or file instead of using TUI, ignoring the set value in config.")
+	outputFilePath := flag.String("output", "", "Sets an output file to use instead of standard output when using -piped")
 	clearCacheMode := flag.Bool("clear-cache", false, "If true, searches the cache directory, removes cache files that fit the filters (-song-name, -song-artist, etc.) and exits. Only songs that contain the set patterns will be affected")
 	songNameFilter := flag.String("song-name-filter", "", "Sets the song name filter to use when -clear-cache is also set")
 	artistNameFilter := flag.String("artist-name-filter", "", "Sets the artist name filter to use when -clear-cache is also set")
@@ -61,10 +62,6 @@ func HandleFlags() {
 		}
 	}
 
-	if global.CurrentConfig.Output.TerminalOutputInOneLine {
-		fmt.Println()
-	}
-
 	if *cacheDirectory != "" {
 		if _, err := os.ReadDir(os.ExpandEnv(*cacheDirectory)); err != nil {
 			os.MkdirAll(*cacheDirectory, 0777)
@@ -73,9 +70,13 @@ func HandleFlags() {
 		global.CurrentConfig.Cache.CacheDir = *cacheDirectory
 	}
 
-	if *outputFilePath != "" {
+	if *isPiped {
+		global.CurrentConfig.Global.Output = "piped"
+	}
+
+	if *outputFilePath != "" && global.CurrentConfig.Global.Output == "piped" {
 		t := os.ExpandEnv(*outputFilePath)
-		output.UpdateOutputDestination(t)
+		piped.UpdateOutputDestination(t)
 	}
 
 	if *clearCacheMode {

@@ -1,7 +1,7 @@
 package structs
 
-type SongData struct {
-	Song       string
+type SongInfo struct {
+	Title      string
 	Artist     string
 	Album      string
 	Duration   float64

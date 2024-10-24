@@ -6,8 +6,8 @@ import (
 	"github.com/Pauloo27/go-mpris"
 	"github.com/godbus/dbus/v5"
 
-	"lrcsnc/pkg/global"
-	"lrcsnc/pkg/structs"
+	"lrcsnc/internal/pkg/global"
+	"lrcsnc/internal/pkg/structs"
 )
 
 type MprisPlayerProvider struct{}
@@ -35,16 +35,15 @@ func InitConn() (conn *dbus.Conn) {
 	return
 }
 
-func (m MprisPlayerProvider) GetSongData() (out structs.SongData) {
+func (m MprisPlayerProvider) GetSongInfo() (out structs.SongInfo) {
 	if global.CurrentPlayer.PlayerName == "" {
 		out.LyricsData.LyricsType = 4
 		return
 	}
 
-	// Handling MPRIS directly is not fail-safe, so to prevent various crashes there is a recover defer.
+	// Handling MPRIS directly is not really fail-safe, so to prevent any panics from reaching the main program there is a recover defer.
 	defer func() {
-		if r := recover(); r != nil {
-		}
+		_ = recover()
 	}()
 
 	conn := InitConn()
@@ -71,7 +70,7 @@ func (m MprisPlayerProvider) GetSongData() (out structs.SongData) {
 	}
 	duration, ok := metadata["mpris:length"]
 
-	out.Song = song.Value().(string)
+	out.Title = song.Value().(string)
 	out.Artist = strings.Join(artist.Value().([]string), ", ")
 	out.Album = album.Value().(string)
 	out.LyricsData.LyricsType = 5
@@ -83,11 +82,11 @@ func (m MprisPlayerProvider) GetSongData() (out structs.SongData) {
 	return
 }
 
-func (m MprisPlayerProvider) GetPlayerData() (out structs.PlayerData) {
-	// Handling MPRIS directly is not fail-safe, so to prevent various crashes there is a recover defer.
+func (m MprisPlayerProvider) GetPlayerInfo() (out structs.PlayerInfo) {
+
+	// Handling MPRIS directly is not really fail-safe, so to prevent any panics from reaching the main program there is a recover defer.
 	defer func() {
-		if r := recover(); r != nil {
-		}
+		_ = recover()
 	}()
 
 	conn := InitConn()

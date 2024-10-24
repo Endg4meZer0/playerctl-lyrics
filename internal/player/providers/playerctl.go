@@ -5,13 +5,13 @@ import (
 	"strconv"
 	"strings"
 
-	"lrcsnc/pkg/global"
-	"lrcsnc/pkg/structs"
+	"lrcsnc/internal/pkg/global"
+	"lrcsnc/internal/pkg/structs"
 )
 
 type PlayerctlPlayerProvider struct{}
 
-func (p PlayerctlPlayerProvider) GetSongData() (out structs.SongData) {
+func (p PlayerctlPlayerProvider) GetSongInfo() (out structs.SongInfo) {
 	cmd := exec.Command("playerctl", "metadata", "-p", global.CurrentPlayer.PlayerName, "-f", "{{title}}\n{{artist}}\n{{album}}\n{{mpris:length}}")
 	output, _ := cmd.CombinedOutput()
 	soutput := strings.Split(string(output), "\n")
@@ -25,7 +25,7 @@ func (p PlayerctlPlayerProvider) GetSongData() (out structs.SongData) {
 		return
 	}
 
-	out.Song = soutput[0]
+	out.Title = soutput[0]
 	out.Artist = soutput[1]
 	out.Album = soutput[2]
 	out.LyricsData.LyricsType = 5
@@ -43,7 +43,7 @@ func (p PlayerctlPlayerProvider) GetSongData() (out structs.SongData) {
 	return
 }
 
-func (p PlayerctlPlayerProvider) GetPlayerData() (out structs.PlayerData) {
+func (p PlayerctlPlayerProvider) GetPlayerInfo() (out structs.PlayerInfo) {
 	var cmd *exec.Cmd
 	if len(global.CurrentConfig.Player.IncludedPlayers) != 0 {
 		includedPlayers := strings.Join(global.CurrentConfig.Player.IncludedPlayers, ",")
@@ -56,7 +56,7 @@ func (p PlayerctlPlayerProvider) GetPlayerData() (out structs.PlayerData) {
 	}
 	output, _ := cmd.CombinedOutput()
 	soutput := strings.Split(string(output), "\n")
-	if soutput[1] != "Stopped" {
+	if soutput[1] != "Stopped" && soutput[1] != "" {
 		out.PlayerName = soutput[0]
 		durationInt, err := strconv.ParseInt(soutput[2], 10, 64)
 		if err == nil {

@@ -11,15 +11,15 @@ import (
 	"strings"
 
 	"lrcsnc/internal/cache"
+	"lrcsnc/internal/pkg/global"
+	"lrcsnc/internal/pkg/structs"
 	"lrcsnc/internal/util"
-	"lrcsnc/pkg/global"
-	"lrcsnc/pkg/structs"
 )
 
 type LrcLibLyricsProvider struct{}
 
-// Sets the Lyrics and LyricTimestamps properties in SongData object.
-func (l LrcLibLyricsProvider) GetLyricsData(song structs.SongData) (out structs.SongLyricsData) {
+// Sets the Lyrics and LyricTimestamps properties in SongInfo object.
+func (l LrcLibLyricsProvider) GetLyricsData(song structs.SongInfo) (out structs.SongLyricsData) {
 	if global.CurrentConfig.Cache.Enabled {
 		cachedData, isNotExpired := cache.GetCachedLyrics(song)
 		if isNotExpired && !(len(cachedData.Lyrics) == 0 && cachedData.LyricsType != 3) {
@@ -56,6 +56,7 @@ func (l LrcLibLyricsProvider) GetLyricsData(song structs.SongData) (out structs.
 	if foundSong.Instrumental {
 		out.LyricsType = 2
 	} else if foundSong.PlainLyrics != "" && foundSong.SyncedLyrics == "" {
+		out.Lyrics = strings.Split(foundSong.PlainLyrics, "\n")
 		out.LyricsType = 1
 	} else {
 		out.LyricsType = 0
@@ -86,17 +87,19 @@ func (l LrcLibLyricsProvider) GetLyricsData(song structs.SongData) (out structs.
 	}
 
 	if global.CurrentConfig.Cache.Enabled && out.LyricsType != 1 {
-		if err := cache.StoreCachedLyrics(song, out); err != nil {
-			log.Println("Could not save the lyrics to the cache! Are there writing perms?")
-		}
+		defer func() {
+			if cache.StoreCachedLyrics(song, out) != nil {
+				log.Println("Could not save the lyrics to the cache! Is there an issue with perms?")
+			}
+		}()
 	}
 
 	return
 }
 
 // Make a URL to lrclib.net/api/get to send a GET request to
-func makeURLGet(song structs.SongData) url.URL {
-	lrclibURL, err := url.Parse("http://lrclib.net/api/get?" + url.PathEscape(fmt.Sprintf("track_name=%v&artist_name=%v&album_name=%v&duration=%v", song.Song, song.Artist, song.Album, int(math.Ceil(song.Duration)))))
+func makeURLGet(song structs.SongInfo) url.URL {
+	lrclibURL, err := url.Parse("http://lrclib.net/api/get?" + url.PathEscape(fmt.Sprintf("track_name=%v&artist_name=%v&album_name=%v&duration=%v", song.Title, song.Artist, song.Album, int(math.Ceil(song.Duration)))))
 	if err != nil {
 		log.Fatalln(err)
 	}
@@ -104,8 +107,8 @@ func makeURLGet(song structs.SongData) url.URL {
 }
 
 // Make a URL to lrclib.net/api/search with album data to send a GET request to
-func makeURLSearchWithAlbum(song structs.SongData) url.URL {
-	lrclibURL, err := url.Parse("http://lrclib.net/api/search?" + url.PathEscape(fmt.Sprintf("track_name=%v&artist_name=%v&album_name=%v", song.Song, song.Artist, song.Album)))
+func makeURLSearchWithAlbum(song structs.SongInfo) url.URL {
+	lrclibURL, err := url.Parse("http://lrclib.net/api/search?" + url.PathEscape(fmt.Sprintf("track_name=%v&artist_name=%v&album_name=%v", song.Title, song.Artist, song.Album)))
 	if err != nil {
 		log.Fatalln(err)
 	}
@@ -113,8 +116,8 @@ func makeURLSearchWithAlbum(song structs.SongData) url.URL {
 }
 
 // Make a URL to lrclib.net/api/search only with necessary data (song name and artist name) to send a GET request to
-func makeURLSearch(song structs.SongData) url.URL {
-	lrclibURL, err := url.Parse("http://lrclib.net/api/search?" + url.PathEscape(fmt.Sprintf("track_name=%v&artist_name=%v", song.Song, song.Artist)))
+func makeURLSearch(song structs.SongInfo) url.URL {
+	lrclibURL, err := url.Parse("http://lrclib.net/api/search?" + url.PathEscape(fmt.Sprintf("track_name=%v&artist_name=%v", song.Title, song.Artist)))
 	if err != nil {
 		log.Fatalln(err)
 	}

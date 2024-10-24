@@ -2,12 +2,13 @@ package config
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"os"
 
-	"lrcsnc/internal/output"
-	"lrcsnc/pkg/global"
-	"lrcsnc/pkg/structs"
+	"lrcsnc/internal/output/piped"
+	"lrcsnc/internal/pkg/global"
+	"lrcsnc/internal/pkg/structs"
 )
 
 var currentConfigPath string
@@ -34,7 +35,7 @@ func ReadConfig(path string) error {
 		global.CurrentConfig = config
 		currentConfigPath = path
 	} else {
-		return ConfigError("FATAL ERRORS IN THE CONFIG WERE DETECTED! Rolling back...")
+		return fmt.Errorf("FATAL ERRORS IN THE CONFIG WERE DETECTED! Rolling back... ")
 	}
 
 	return nil
@@ -84,7 +85,7 @@ func ReadConfigFromDefaultPath() error {
 		if !fatal {
 			global.CurrentConfig = config
 		} else {
-			return ConfigError("FATAL ERRORS IN THE CONFIG WERE DETECTED! Rolling back...")
+			return fmt.Errorf("FATAL ERRORS IN THE CONFIG WERE DETECTED! Rolling back... ")
 		}
 	}
 
@@ -96,14 +97,14 @@ func ReadConfigFromDefaultPath() error {
 func UpdateConfig() {
 	configFile, err := os.ReadFile(os.ExpandEnv(currentConfigPath))
 	if err != nil {
-		output.PrintOverwrite("Errors while reading config! Falling back...")
+		piped.PrintOverwrite("Errors while reading config! Falling back...")
 		return
 	}
 
 	var config structs.Config
 
 	if err := json.Unmarshal(configFile, &config); err != nil {
-		output.PrintOverwrite("Errors while parsing config! Falling back...")
+		piped.PrintOverwrite("Errors while parsing config! Falling back...")
 		return
 	}
 
@@ -116,7 +117,7 @@ func UpdateConfig() {
 	if !fatal {
 		global.CurrentConfig = config
 	} else {
-		output.PrintOverwrite("Errors while parsing config! Falling back...")
+		piped.PrintOverwrite("Errors while parsing config! Falling back...")
 		return
 	}
 }

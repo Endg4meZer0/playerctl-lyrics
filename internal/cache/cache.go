@@ -9,12 +9,12 @@ import (
 	"strings"
 	"time"
 
+	"lrcsnc/internal/pkg/global"
+	"lrcsnc/internal/pkg/structs"
 	"lrcsnc/internal/util"
-	"lrcsnc/pkg/global"
-	"lrcsnc/pkg/structs"
 )
 
-func GetCachedLyrics(song structs.SongData) (structs.SongLyricsData, bool) {
+func GetCachedLyrics(song structs.SongInfo) (structs.SongLyricsData, bool) {
 	if !global.CurrentConfig.Cache.Enabled {
 		return structs.SongLyricsData{}, true
 	}
@@ -25,7 +25,7 @@ func GetCachedLyrics(song structs.SongData) (structs.SongLyricsData, bool) {
 
 	cacheDirectory = os.ExpandEnv(cacheDirectory)
 
-	filename := getFilename(song.Song, song.Artist, song.Album, song.Duration)
+	filename := getFilename(song.Title, song.Artist, song.Album, song.Duration)
 	fullPath := cacheDirectory + "/" + filename + ".json"
 
 	if file, err := os.ReadFile(fullPath); err == nil {
@@ -47,7 +47,7 @@ func GetCachedLyrics(song structs.SongData) (structs.SongLyricsData, bool) {
 	}
 }
 
-func StoreCachedLyrics(song structs.SongData, data structs.SongLyricsData) error {
+func StoreCachedLyrics(song structs.SongInfo, data structs.SongLyricsData) error {
 	cacheDirectory := global.CurrentConfig.Cache.CacheDir
 	if strings.Contains(cacheDirectory, "$XDG_CACHE_DIR") && os.Getenv("$XDG_CACHE_DIR") == "" {
 		cacheDirectory = strings.ReplaceAll(cacheDirectory, "$XDG_CACHE_DIR", "$HOME/.cache")
@@ -60,7 +60,7 @@ func StoreCachedLyrics(song structs.SongData, data structs.SongLyricsData) error
 		os.Chmod(cacheDirectory, 0777)
 	}
 
-	filename := getFilename(song.Song, song.Artist, song.Album, song.Duration)
+	filename := getFilename(song.Title, song.Artist, song.Album, song.Duration)
 	fullPath := cacheDirectory + "/" + filename + ".json"
 
 	encodedData, err := json.Marshal(data)
