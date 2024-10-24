@@ -9,6 +9,7 @@ import (
 	"lrcsnc/internal/pkg/global"
 	"lrcsnc/internal/player"
 
+	"github.com/charmbracelet/bubbles/help"
 	"github.com/charmbracelet/bubbles/progress"
 	vp "github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
@@ -30,10 +31,9 @@ type model struct {
 
 	position, duration int
 
-	w int
-
 	lyricViewport vp.Model
 	progressBar   progress.Model
+	help          help.Model
 }
 
 func InitialModel() model {
@@ -53,17 +53,19 @@ func InitialModel() model {
 		duration: int(global.CurrentSong.Duration),
 
 		progressBar: progress.New(progress.WithSolidFill("10")),
+		help:        help.New(),
 	}
 }
 
 var (
-	styleLyric           = gloss.NewStyle().AlignHorizontal(gloss.Center).Bold(true)
-	styleBefore          = styleLyric.Foreground(gloss.Color("15")).Faint(true)
-	styleCurrent         = styleLyric.Foreground(gloss.Color("15"))
-	styleAfter           = styleLyric.Foreground(gloss.Color("8"))
-	styleCursor          = styleLyric.Foreground(gloss.Color("11"))
-	styleTimestamp       = gloss.NewStyle().Foreground(gloss.Color("0")).Faint(true)
-	styleTimestampCursor = gloss.NewStyle().Foreground(gloss.Color("3"))
+	styleLyric            = gloss.NewStyle().AlignHorizontal(gloss.Center).Bold(true)
+	styleBefore           = styleLyric.Foreground(gloss.Color("15"))
+	styleCurrent          = styleLyric.Foreground(gloss.Color("11"))
+	styleAfter            = styleLyric.Foreground(gloss.Color("15")).Faint(true)
+	styleCursor           = styleLyric.Foreground(gloss.Color("3"))
+	styleTimestamp        = gloss.NewStyle().Foreground(gloss.Color("8"))
+	styleTimestampCurrent = gloss.NewStyle().Foreground(gloss.Color("3"))
+	styleTimestampCursor  = gloss.NewStyle().Foreground(gloss.Color("3")).Faint(true)
 )
 
 type animateProgressBarTick bool
@@ -132,7 +134,6 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, tea.Batch(watchReceivedOverwrites(), tea.Tick(5*time.Second, func(t time.Time) tea.Msg { return overwriteReceived("") }))
 
 	case tea.WindowSizeMsg:
-		m.w = msg.Width
 		m.lyricLines = make([][]string, 0, len(global.CurrentSong.LyricsData.Lyrics))
 		for _, s := range global.CurrentSong.LyricsData.Lyrics {
 			m.lyricLines = append(m.lyricLines, m.lyricWrap(s))
@@ -149,13 +150,22 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.lyricViewport.Height = msg.Height - verticalMarginHeight
 		}
 		m.lyricViewport.SetContent(gloss.PlaceHorizontal(m.lyricViewport.Width, gloss.Center, m.lyricsView()))
+		m.lyricViewport.SetYOffset(min(m.lyricViewport.TotalLineCount()-m.lyricViewport.Height, max(0, m.calcYOffset(m.cursor))))
 
 	case tea.KeyMsg:
+		if m.help.ShowAll {
+			m.help.ShowAll = false
+			return m, nil
+		}
 
 		switch msg.String() {
 
 		case "ctrl+c", "q":
 			return m, tea.Quit
+
+		case "?", "h":
+			m.help.ShowAll = true
+			return m, nil
 
 		case "enter":
 			if global.CurrentSong.LyricsData.LyricsType != 0 {
@@ -226,10 +236,13 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m model) View() (s string) {
-	if !m.ready {
-		return gloss.NewStyle().AlignVertical(gloss.Center).AlignHorizontal(gloss.Center).Render("Loading...")
-	} else {
+	switch {
+	case m.help.ShowAll:
+		return gloss.NewStyle().Align(gloss.Center).Render(m.help.View(keys))
+	case m.ready:
 		return gloss.JoinVertical(gloss.Center, m.headerView(), m.lyricViewport.View(), m.footerView())
+	default:
+		return gloss.NewStyle().AlignVertical(gloss.Center).AlignHorizontal(gloss.Center).Render("Loading...")
 	}
 }
 
@@ -240,7 +253,7 @@ func (m model) headerView() string {
 	} else {
 		title = gloss.NewStyle().Foreground(gloss.Color("15")).AlignHorizontal(gloss.Center).Render(fmt.Sprintf("%s - %s%s", global.CurrentSong.Artist, global.CurrentSong.Title, m.header))
 	}
-	return gloss.NewStyle().BorderBottom(true).BorderStyle(gloss.NormalBorder()).Margin(0, 2).Render(title)
+	return gloss.NewStyle().BorderBottom(true).BorderStyle(gloss.NormalBorder()).Render(gloss.PlaceHorizontal(m.lyricViewport.Width-4, gloss.Center, title))
 }
 
 func (m model) footerView() string {
@@ -317,7 +330,9 @@ func (m model) lyricsView() string {
 			var timestampView string = ""
 			if m.showTimestamps {
 				style := styleTimestamp
-				if i == m.cursor {
+				if i == m.cursor && i == m.currentLyric {
+					style = styleTimestampCurrent
+				} else if i == m.cursor {
 					style = styleTimestampCursor
 				}
 				timestampView = style.Render(timestampIntoString(global.CurrentSong.LyricsData.LyricTimestamps[i])) + " "
@@ -326,7 +341,7 @@ func (m model) lyricsView() string {
 			line = gloss.JoinHorizontal(gloss.Center, timestampView, line)
 
 			if i == m.currentLyric && i == m.cursor && !m.followSync && global.CurrentSong.LyricsData.LyricsType == 0 {
-				line = gloss.NewStyle().Border(gloss.ThickBorder(), true, false).BorderForeground(gloss.Color("11")).Render(line)
+				line = gloss.NewStyle().Border(gloss.ThickBorder(), true, false).BorderForeground(gloss.Color("3")).Render(line)
 			}
 
 			lines = append(lines, line)
@@ -346,7 +361,7 @@ func (m model) lyricsView() string {
 			}
 
 			for _, l := range lyricLine {
-				stylizedLyrics = append(stylizedLyrics, styleCurrent.Render(l))
+				stylizedLyrics = append(stylizedLyrics, styleBefore.Render(l))
 			}
 
 			if i == m.cursor {
