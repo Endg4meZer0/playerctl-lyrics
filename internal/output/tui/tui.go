@@ -29,6 +29,8 @@ type model struct {
 	showProgressBar bool
 	// showLyricTimer  bool
 
+	w, h int
+
 	position, duration int
 
 	lyricViewport vp.Model
@@ -37,6 +39,9 @@ type model struct {
 }
 
 func InitialModel() model {
+	helpModel := help.New()
+	helpModel.Styles.FullKey = gloss.NewStyle().Align(gloss.Center).Faint(false).Foreground(gloss.Color("11"))
+	helpModel.Styles.FullDesc = gloss.NewStyle().Align(gloss.Center).Faint(false).Foreground(gloss.Color("15"))
 	return model{
 		ready: false,
 
@@ -53,7 +58,7 @@ func InitialModel() model {
 		duration: int(global.CurrentSong.Duration),
 
 		progressBar: progress.New(progress.WithSolidFill("10")),
-		help:        help.New(),
+		help:        helpModel,
 	}
 }
 
@@ -101,7 +106,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		default:
 			m.header = ""
 		}
-		m.lyricViewport.SetContent(gloss.PlaceHorizontal(m.lyricViewport.Width, gloss.Center, m.lyricsView()))
+		m.lyricViewport.SetContent(gloss.PlaceHorizontal(m.w, gloss.Center, m.lyricsView()))
 		m.lyricViewport.SetYOffset(m.lyricViewport.Height)
 		if global.CurrentSong.LyricsData.LyricsType != 0 {
 			m.followSync = false
@@ -117,7 +122,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, tea.Batch(watchPlayerInfoChanges(), m.progressBar.SetPercent(float64(m.position)/float64(m.duration)))
 
 	case animateProgressBarTick:
-		m.position++
+		if global.CurrentPlayer.IsPlaying {
+			m.position++
+		}
 		return m, m.progressBarTick()
 
 	case currentLyricChanged:
@@ -125,7 +132,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.followSync {
 			m.cursor = m.currentLyric
 		}
-		m.lyricViewport.SetContent(gloss.PlaceHorizontal(m.lyricViewport.Width, gloss.Center, m.lyricsView()))
+		m.lyricViewport.SetContent(gloss.PlaceHorizontal(m.w, gloss.Center, m.lyricsView()))
 		m.lyricViewport.YOffset = min(m.lyricViewport.TotalLineCount()-m.lyricViewport.Height, max(0, m.calcYOffset(m.cursor)))
 		return m, watchCurrentLyricChanges()
 
@@ -134,6 +141,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, tea.Batch(watchReceivedOverwrites(), tea.Tick(5*time.Second, func(t time.Time) tea.Msg { return overwriteReceived("") }))
 
 	case tea.WindowSizeMsg:
+		m.w = msg.Width
+		m.h = msg.Height
 		m.lyricLines = make([][]string, 0, len(global.CurrentSong.LyricsData.Lyrics))
 		for _, s := range global.CurrentSong.LyricsData.Lyrics {
 			m.lyricLines = append(m.lyricLines, m.lyricWrap(s))
@@ -143,13 +152,13 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		verticalMarginHeight := headerHeight + footerHeight
 		if !m.ready {
 			m.ready = true
-			m.lyricViewport = vp.New(msg.Width, msg.Height-verticalMarginHeight)
+			m.lyricViewport = vp.New(m.w, m.h-verticalMarginHeight)
 			m.lyricViewport.Style = m.lyricViewport.Style.AlignHorizontal(gloss.Center).AlignVertical(gloss.Center)
 		} else {
-			m.lyricViewport.Width = msg.Width
-			m.lyricViewport.Height = msg.Height - verticalMarginHeight
+			m.lyricViewport.Width = m.w
+			m.lyricViewport.Height = m.h - verticalMarginHeight
 		}
-		m.lyricViewport.SetContent(gloss.PlaceHorizontal(m.lyricViewport.Width, gloss.Center, m.lyricsView()))
+		m.lyricViewport.SetContent(gloss.PlaceHorizontal(m.w, gloss.Center, m.lyricsView()))
 		m.lyricViewport.SetYOffset(min(m.lyricViewport.TotalLineCount()-m.lyricViewport.Height, max(0, m.calcYOffset(m.cursor))))
 
 	case tea.KeyMsg:
@@ -186,7 +195,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if m.cursor < 0 {
 				m.cursor = 0
 			}
-			m.lyricViewport.SetContent(gloss.PlaceHorizontal(m.lyricViewport.Width, gloss.Center, m.lyricsView()))
+			m.lyricViewport.SetContent(gloss.PlaceHorizontal(m.w, gloss.Center, m.lyricsView()))
 			m.lyricViewport.SetYOffset(min(m.lyricViewport.TotalLineCount()-m.lyricViewport.Height, max(0, m.calcYOffset(m.cursor))))
 
 		case "down", "j":
@@ -197,7 +206,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if m.cursor > len(m.lyricLines)-1 {
 				m.cursor = len(m.lyricLines) - 1
 			}
-			m.lyricViewport.SetContent(gloss.PlaceHorizontal(m.lyricViewport.Width, gloss.Center, m.lyricsView()))
+			m.lyricViewport.SetContent(gloss.PlaceHorizontal(m.w, gloss.Center, m.lyricsView()))
 			m.lyricViewport.SetYOffset(min(m.lyricViewport.TotalLineCount()-m.lyricViewport.Height, max(0, m.calcYOffset(m.cursor))))
 
 		case "f":
@@ -211,7 +220,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.cursor = m.currentLyric
 				}
 			}
-			m.lyricViewport.SetContent(gloss.PlaceHorizontal(m.lyricViewport.Width, gloss.Center, m.lyricsView()))
+			m.lyricViewport.SetContent(gloss.PlaceHorizontal(m.w, gloss.Center, m.lyricsView()))
 			m.lyricViewport.SetYOffset(min(m.lyricViewport.TotalLineCount()-m.lyricViewport.Height, max(0, m.calcYOffset(m.cursor))))
 
 		case "t":
@@ -220,7 +229,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			for _, s := range global.CurrentSong.LyricsData.Lyrics {
 				m.lyricLines = append(m.lyricLines, m.lyricWrap(s))
 			}
-			m.lyricViewport.SetContent(gloss.PlaceHorizontal(m.lyricViewport.Width, gloss.Center, m.lyricsView()))
+			m.lyricViewport.SetContent(gloss.PlaceHorizontal(m.w, gloss.Center, m.lyricsView()))
 
 		case "p":
 			m.showProgressBar = !m.showProgressBar
@@ -238,7 +247,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m model) View() (s string) {
 	switch {
 	case m.help.ShowAll:
-		return gloss.NewStyle().Align(gloss.Center).Render(m.help.View(keys))
+		return gloss.PlaceHorizontal(m.w, gloss.Center, gloss.PlaceVertical(m.h, gloss.Center, m.help.View(keys)))
 	case m.ready:
 		return gloss.JoinVertical(gloss.Center, m.headerView(), m.lyricViewport.View(), m.footerView())
 	default:
@@ -253,7 +262,7 @@ func (m model) headerView() string {
 	} else {
 		title = gloss.NewStyle().Foreground(gloss.Color("15")).AlignHorizontal(gloss.Center).Render(fmt.Sprintf("%s - %s%s", global.CurrentSong.Artist, global.CurrentSong.Title, m.header))
 	}
-	return gloss.NewStyle().BorderBottom(true).BorderStyle(gloss.NormalBorder()).Render(gloss.PlaceHorizontal(m.lyricViewport.Width-4, gloss.Center, title))
+	return gloss.NewStyle().BorderBottom(true).BorderStyle(gloss.NormalBorder()).Render(gloss.PlaceHorizontal(m.w-4, gloss.Center, title))
 }
 
 func (m model) footerView() string {
@@ -264,7 +273,7 @@ func (m model) footerView() string {
 	duration := gloss.NewStyle().AlignHorizontal(gloss.Right).Render(" " + positionIntoString(m.duration))
 	m.progressBar.Empty = ' '
 	m.progressBar.Full = '█'
-	m.progressBar.Width = max(0, m.lyricViewport.Width-gloss.Width(position)-gloss.Width(duration)-4)
+	m.progressBar.Width = max(0, m.w-gloss.Width(position)-gloss.Width(duration)-4)
 	m.progressBar.ShowPercentage = false
 	return gloss.NewStyle().BorderTop(true).BorderStyle(gloss.NormalBorder()).Margin(0, 2).Render(gloss.JoinHorizontal(gloss.Center, position, m.progressBar.ViewAs(float64(m.position)/float64(m.duration)), duration))
 }
@@ -426,7 +435,7 @@ func (m model) calcYOffset(l int) (res int) {
 }
 
 func (m model) lyricWrap(l string) (res []string) {
-	if gloss.Width(styleCurrent.Render(l)) < m.lyricViewport.Width*2/3 {
+	if gloss.Width(styleCurrent.Render(l)) < m.lyricViewport.Width*3/4 {
 		return []string{l}
 	} else {
 		res = make([]string, 0)
