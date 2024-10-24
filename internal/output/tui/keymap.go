@@ -47,7 +47,7 @@ var keys = keyMap{
 	),
 	SeekToLyric: key.NewBinding(
 		key.WithKeys("enter"),
-		key.WithHelp("⏎", "seek to selected lyric"),
+		key.WithHelp("enter", "seek to selected lyric"),
 	),
 	Help: key.NewBinding(
 		key.WithKeys("?", "h"),
