@@ -1,7 +1,5 @@
 package structs
 
-// TODO: config options for tui and piped separately
-
 // LEVEL 0
 
 type Config struct {
