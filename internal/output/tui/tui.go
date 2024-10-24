@@ -166,7 +166,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 
 		case "enter":
-			if global.CurrentSong.LyricsData.LyricsType != 0 {
+			if global.CurrentSong.LyricsData.LyricsType != 0 || m.currentLyric == -1 {
 				return m, nil
 			}
 
