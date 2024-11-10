@@ -12,15 +12,17 @@ import (
 	"lrcsnc/internal/output/piped"
 	"lrcsnc/internal/output/tui"
 	"lrcsnc/internal/pkg/global"
+	"lrcsnc/internal/player"
 
 	tea "github.com/charmbracelet/bubbletea"
 )
 
 func Start() {
+	// Handle the -(-) flags
 	flags.HandleFlags()
 
-	loop.SyncLoop()
-
+	// Start the USR1 signal listener for config updates
+	// TODO: replace with live file watcher
 	usr1Sig := make(chan os.Signal, 1)
 	signal.Notify(usr1Sig, syscall.SIGUSR1)
 
@@ -31,7 +33,16 @@ func Start() {
 		}
 	}()
 
-	if global.CurrentConfig.Global.Output == "piped" {
+	// Initialize the player listener session
+	player.InitSession()
+	defer player.CloseSession()
+
+	// Start the main loop
+	loop.SyncLoop()
+
+	// Initialize the output
+	switch global.CurrentConfig.Global.Output {
+	case "piped":
 		go piped.Init()
 		defer piped.CloseOutput()
 
@@ -40,7 +51,8 @@ func Start() {
 
 		<-exitSigs
 		os.Exit(0)
-	} else if global.CurrentConfig.Global.Output == "tui" {
+	// TUI also falls under the default handler
+	default:
 		p := tea.NewProgram(tui.InitialModel(), tea.WithAltScreen())
 		if _, err := p.Run(); err != nil {
 			fmt.Printf("Error: %v", err)

@@ -9,7 +9,7 @@ import (
 	"lrcsnc/internal/lyrics"
 	"lrcsnc/internal/output"
 	"lrcsnc/internal/pkg/global"
-	"lrcsnc/internal/player"
+	player "lrcsnc/internal/player/providers"
 	"lrcsnc/internal/romanization"
 )
 
@@ -17,10 +17,19 @@ func SyncLoop() {
 	// Channels to communicate between goroutines
 	songChanged := make(chan bool, 1)
 	fullLyrChan := make(chan bool, 1)
+	var err error
 
 	// Initial player data
-	global.CurrentPlayer = player.PlayerInfoProviders[global.CurrentConfig.Player.PlayerProvider].GetPlayerInfo()
-	global.CurrentSong = player.PlayerInfoProviders[global.CurrentConfig.Player.PlayerProvider].GetSongInfo()
+	global.CurrentPlayer, err = player.PlayerProviders[global.CurrentConfig.Player.PlayerProvider].GetPlayerInfo()
+	if err != nil {
+		// TODO: logger :)
+	}
+
+	global.CurrentSong, err = player.PlayerProviders[global.CurrentConfig.Player.PlayerProvider].GetSongInfo()
+	if err != nil {
+		// TODO: logger :)
+	}
+
 	songChanged <- true
 
 	// Set up timers and tickers
@@ -37,8 +46,16 @@ func SyncLoop() {
 	go func() {
 		for {
 			<-checkerTicker.C
-			playerData := player.PlayerInfoProviders[global.CurrentConfig.Player.PlayerProvider].GetPlayerInfo()
-			song := player.PlayerInfoProviders[global.CurrentConfig.Player.PlayerProvider].GetSongInfo()
+			playerData, err := player.PlayerProviders[global.CurrentConfig.Player.PlayerProvider].GetPlayerInfo()
+			if err != nil {
+				// TODO: logger :)
+				continue
+			}
+			song, err := player.PlayerProviders[global.CurrentConfig.Player.PlayerProvider].GetSongInfo()
+			if err != nil {
+				// TODO: logger :)
+				continue
+			}
 			if song.Title != global.CurrentSong.Title || song.Artist != global.CurrentSong.Artist || song.Album != global.CurrentSong.Album || song.Duration != global.CurrentSong.Duration {
 				position = playerData.Position
 				timeBeforeGettingLyrics = time.Now()
@@ -74,11 +91,18 @@ func SyncLoop() {
 
 	// Goroutine to watch abnormal changes in player's position
 	// For example, seeking on a position bar is counted as abnormal
+	// TODO: replace with signal-based communication from D-Bus
 	go func() {
 		for {
 			<-positionCheckTimer.C
 			var initialPosition float64
-			global.CurrentPlayer = player.PlayerInfoProviders[global.CurrentConfig.Player.PlayerProvider].GetPlayerInfo()
+			var err error
+			global.CurrentPlayer, err = player.PlayerProviders[global.CurrentConfig.Player.PlayerProvider].GetPlayerInfo()
+			if err != nil {
+				// TODO: logger :)
+				continue
+			}
+
 			initialPosition = global.CurrentPlayer.Position
 			if global.CurrentPlayer.IsPlaying {
 				if global.CurrentConfig.Global.EnableActiveSync {
@@ -86,7 +110,12 @@ func SyncLoop() {
 					positionInnerCheckTicker.Reset(100 * time.Millisecond)
 					for i := 0; i < requiredTicks; i++ {
 						<-positionInnerCheckTicker.C
-						global.CurrentPlayer = player.PlayerInfoProviders[global.CurrentConfig.Player.PlayerProvider].GetPlayerInfo()
+						global.CurrentPlayer, err = player.PlayerProviders[global.CurrentConfig.Player.PlayerProvider].GetPlayerInfo()
+						if err != nil {
+							// TODO: logger :)
+							continue
+						}
+
 						newPosition := global.CurrentPlayer.Position
 						expectedPosition := (initialPosition + 0.1*(float64(i)+1))
 						diff := newPosition - expectedPosition
@@ -99,7 +128,11 @@ func SyncLoop() {
 				} else {
 					positionInnerCheckTicker.Reset(time.Second)
 					<-positionInnerCheckTicker.C
-					global.CurrentPlayer = player.PlayerInfoProviders[global.CurrentConfig.Player.PlayerProvider].GetPlayerInfo()
+					global.CurrentPlayer, err = player.PlayerProviders[global.CurrentConfig.Player.PlayerProvider].GetPlayerInfo()
+					if err != nil {
+						// TODO: logger :)
+						continue
+					}
 					newPosition := global.CurrentPlayer.Position
 					diff := newPosition - initialPosition
 					if !(diff >= 0.9 && diff <= 1.1) {

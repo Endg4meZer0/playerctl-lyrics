@@ -12,3 +12,5 @@ type LyricsDataProvider interface {
 var LyricsDataProviders map[string]LyricsDataProvider = map[string]LyricsDataProvider{
 	"lrclib": lrclib.LrcLibLyricsProvider{},
 }
+
+// TODO: separate getter from DTO-controller

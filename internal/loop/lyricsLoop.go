@@ -6,7 +6,7 @@ import (
 
 	"lrcsnc/internal/output"
 	"lrcsnc/internal/pkg/global"
-	"lrcsnc/internal/player"
+	player "lrcsnc/internal/player/providers"
 )
 
 var lyricsTimer = time.NewTimer(5 * time.Second)
@@ -25,7 +25,11 @@ func SyncLyrics() {
 			if global.CurrentSong.LyricsData.LyricsType >= 2 {
 				output.OutputControllers[global.CurrentConfig.Global.Output].DisplayCurrentLyric(-1)
 			} else {
-				playerData := player.PlayerInfoProviders[global.CurrentConfig.Player.PlayerProvider].GetPlayerInfo()
+				playerData, err := player.PlayerProviders[global.CurrentConfig.Player.PlayerProvider].GetPlayerInfo()
+				if err != nil {
+					// TODO: logger :)
+					continue
+				}
 
 				if math.Abs(currentPosition-playerData.Position) > 1 {
 					currentPosition = playerData.Position

@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"lrcsnc/internal/pkg/global"
-	"lrcsnc/internal/player"
+	"lrcsnc/internal/player/controllers"
 
 	"github.com/charmbracelet/bubbles/help"
 	"github.com/charmbracelet/bubbles/progress"
@@ -170,8 +170,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, nil
 			}
 
-			if !player.PlayerInfoControllers[global.CurrentConfig.Player.PlayerProvider].SeekTo(global.CurrentSong.LyricsData.LyricTimestamps[m.cursor]) {
-				OverwriteReceived <- "Couldn't seek to the lyric!"
+			if err := controllers.PlayerControllers[global.CurrentConfig.Player.PlayerProvider].SeekTo(global.CurrentSong.LyricsData.LyricTimestamps[m.cursor]); err != nil {
+				OverwriteReceived <- "Couldn't seek to this lyric!" // TODO: "Check the log for more information"
 			}
 
 			return m, nil

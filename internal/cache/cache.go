@@ -14,6 +14,7 @@ import (
 	"lrcsnc/internal/pkg/util"
 )
 
+// Returns the specified song's lyrics data from cache. The returned boolean is true if the cached data exists, is not expired and the function didn't end up with error.
 func GetCachedLyrics(song structs.SongInfo) (structs.SongLyricsData, bool) {
 	if !global.CurrentConfig.Cache.Enabled {
 		return structs.SongLyricsData{}, true
@@ -47,6 +48,7 @@ func GetCachedLyrics(song structs.SongInfo) (structs.SongLyricsData, bool) {
 	}
 }
 
+// Stores the specified song's lyrics data
 func StoreCachedLyrics(song structs.SongInfo, data structs.SongLyricsData) error {
 	cacheDirectory := global.CurrentConfig.Cache.CacheDir
 	if strings.Contains(cacheDirectory, "$XDG_CACHE_DIR") && os.Getenv("$XDG_CACHE_DIR") == "" {
@@ -75,5 +77,10 @@ func StoreCachedLyrics(song structs.SongInfo, data structs.SongLyricsData) error
 }
 
 func getFilename(song string, artist string, album string, duration float64) string {
-	return fmt.Sprintf("%v.%v.%v.%v", util.RemoveBadCharacters(song), util.RemoveBadCharacters(artist), util.RemoveBadCharacters(album), math.Round(duration))
+	return fmt.Sprintf("%v.%v.%v.%v",
+		util.RemoveBadCharacters(song),
+		util.RemoveBadCharacters(artist),
+		util.RemoveBadCharacters(album),
+		math.Round(duration),
+	)
 }

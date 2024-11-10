@@ -1,3 +1,5 @@
+// Playerctl support is deprecated as of 0.3.0 and right now exists purely for compatibility purposes
+
 package providers
 
 import (
@@ -11,18 +13,19 @@ import (
 
 type PlayerctlPlayerProvider struct{}
 
-func (p PlayerctlPlayerProvider) GetSongInfo() (out structs.SongInfo) {
+func (p *PlayerctlPlayerProvider) GetSongInfo() (structs.SongInfo, error) {
+	var out structs.SongInfo
 	cmd := exec.Command("playerctl", "metadata", "-p", global.CurrentPlayer.PlayerName, "-f", "{{title}}\n{{artist}}\n{{album}}\n{{mpris:length}}")
 	output, _ := cmd.CombinedOutput()
 	soutput := strings.Split(string(output), "\n")
 	if len(soutput) != 5 {
 		out.LyricsData.LyricsType = 4
-		return
+		return out, nil
 	}
 
 	if soutput[0] == "" {
 		out.LyricsData.LyricsType = 4
-		return
+		return out, nil
 	}
 
 	out.Title = soutput[0]
@@ -40,10 +43,11 @@ func (p PlayerctlPlayerProvider) GetSongInfo() (out structs.SongInfo) {
 		out.Duration = duration
 	}
 
-	return
+	return out, nil
 }
 
-func (p PlayerctlPlayerProvider) GetPlayerInfo() (out structs.PlayerInfo) {
+func (p *PlayerctlPlayerProvider) GetPlayerInfo() (structs.PlayerInfo, error) {
+	var out structs.PlayerInfo
 	var cmd *exec.Cmd
 	if len(global.CurrentConfig.Player.IncludedPlayers) != 0 {
 		includedPlayers := strings.Join(global.CurrentConfig.Player.IncludedPlayers, ",")
@@ -73,5 +77,5 @@ func (p PlayerctlPlayerProvider) GetPlayerInfo() (out structs.PlayerInfo) {
 		out.Position = 0
 	}
 
-	return
+	return out, nil
 }

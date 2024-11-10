@@ -1,3 +1,5 @@
+// Playerctl support is deprecated as of 0.3.0 and right now exists purely for compatibility purposes
+
 package controllers
 
 import (
@@ -9,13 +11,13 @@ import (
 
 type PlayerctlPlayerController struct{}
 
-func (p PlayerctlPlayerController) SeekTo(pos float64) bool {
+func (p PlayerctlPlayerController) SeekTo(pos float64) error {
 	if global.CurrentPlayer.PlayerName == "" {
-		return false
+		return fmt.Errorf("[player/controllers/playerctl/SeekTo] ERROR: Tried to seek to lyric, but no player name is present in global config")
 	}
 
 	cmd := exec.Command("playerctl", "position", "-p", global.CurrentPlayer.PlayerName, fmt.Sprintf("%.2f", pos))
 	_, err := cmd.CombinedOutput()
 
-	return err == nil
+	return err
 }

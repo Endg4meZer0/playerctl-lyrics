@@ -17,27 +17,29 @@ import (
 var helpText = []string{
 	"Usage:",
 	"  lrcsnc [FLAGS...]",
-	"  If certain flags are not set, the command will start the main process that gets lyrics, syncs them with playerctl and prints them to stdout.",
 	"",
-	"Flags:",
+	"Options:",
 }
 
+var (
+	configPath       = flag.String("config", "", "Sets the config file to use")
+	cacheDirectory   = flag.String("cache-dir", "", "Sets the cache directory")
+	isPiped          = flag.Bool("piped", false, "Pipe the output to stdout or file instead of using TUI, ignoring the set value in config.")
+	outputFilePath   = flag.String("output", "", "Sets an output file to use instead of standard output when using -piped")
+	clearCacheMode   = flag.Bool("clear-cache", false, "If true, searches the cache directory, removes cache files that fit the filters (-song-name, -song-artist, etc.) and exits. Only songs that contain the set patterns will be affected")
+	songNameFilter   = flag.String("song-name-filter", "", "Sets the song name filter to use when -clear-cache is also set")
+	artistNameFilter = flag.String("artist-name-filter", "", "Sets the artist name filter to use when -clear-cache is also set")
+	albumNameFilter  = flag.String("album-name-filter", "", "Sets the album name filter to use when -clear-cache is also set")
+	durationFilter   = flag.Int("duration-filter", 0, "Sets the duration filter to use when -clear-cache is also set")
+	displayHelp      = flag.Bool("help", false, "Display the help message and exit")
+	displayVersion   = flag.Bool("version", false, "Display the version")
+)
+
 func HandleFlags() {
-	configPath := flag.String("config", "", "Sets the config file to use")
-	cacheDirectory := flag.String("cache-dir", "", "Sets the cache directory")
-	isPiped := flag.Bool("piped", false, "Pipe the output to stdout or file instead of using TUI, ignoring the set value in config.")
-	outputFilePath := flag.String("output", "", "Sets an output file to use instead of standard output when using -piped")
-	clearCacheMode := flag.Bool("clear-cache", false, "If true, searches the cache directory, removes cache files that fit the filters (-song-name, -song-artist, etc.) and exits. Only songs that contain the set patterns will be affected")
-	songNameFilter := flag.String("song-name-filter", "", "Sets the song name filter to use when -clear-cache is also set")
-	artistNameFilter := flag.String("artist-name-filter", "", "Sets the artist name filter to use when -clear-cache is also set")
-	albumNameFilter := flag.String("album-name-filter", "", "Sets the album name filter to use when -clear-cache is also set")
-	durationFilter := flag.Int("duration-filter", 0, "Sets the duration filter to use when -clear-cache is also set")
-	displayHelp := flag.Bool("help", false, "Display the help message and exit")
-	displayVersion := flag.Bool("version", false, "Display the version")
 	flag.Parse()
 
 	if *displayVersion {
-		fmt.Println("v0.2.1")
+		fmt.Println("v0.3.0")
 		os.Exit(0)
 	}
 
