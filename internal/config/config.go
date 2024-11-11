@@ -11,6 +11,8 @@ import (
 	"lrcsnc/internal/pkg/structs"
 )
 
+// TODO: move to KDL for configuration
+
 var currentConfigPath string
 
 func ReadConfig(path string) error {

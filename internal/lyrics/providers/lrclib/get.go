@@ -19,12 +19,12 @@ import (
 type LrcLibLyricsProvider struct{}
 
 // Sets the Lyrics and LyricTimestamps properties in SongInfo object.
-func (l LrcLibLyricsProvider) GetLyricsData(song structs.SongInfo) (out structs.SongLyricsData) {
+func (l LrcLibLyricsProvider) GetLyricsData(song *structs.SongInfo) error {
 	if global.CurrentConfig.Cache.Enabled {
-		cachedData, isNotExpired := cache.GetCachedLyrics(song)
-		if isNotExpired && !(len(cachedData.Lyrics) == 0 && cachedData.LyricsType != 3) {
-			out = cachedData
-			return
+		cachedData, cacheState := cache.GetCachedLyrics(*song)
+		if cacheState == cache.CacheStateActive {
+			song.LyricsData = cachedData
+			return nil
 		}
 	}
 
@@ -33,33 +33,33 @@ func (l LrcLibLyricsProvider) GetLyricsData(song structs.SongInfo) (out structs.
 	var found bool = false
 
 	if song.Duration != 0 {
-		getURL := makeURLGet(song)
+		getURL := makeURLGet(*song)
 		foundSongs, found = sendRequest(getURL)
 	}
 
 	if !found {
-		getURL = makeURLSearchWithAlbum(song)
+		getURL = makeURLSearchWithAlbum(*song)
 		foundSongs, found = sendRequest(getURL)
 		if !found {
-			getURL = makeURLSearch(song)
+			getURL = makeURLSearch(*song)
 			foundSongs, found = sendRequest(getURL)
 		}
 	}
 
 	if !found {
-		out.LyricsType = 3
-		return
+		song.LyricsData.LyricsType = 3
+		return nil
 	}
 
 	foundSong := foundSongs[0]
 
 	if foundSong.Instrumental {
-		out.LyricsType = 2
+		song.LyricsData.LyricsType = 2
 	} else if foundSong.PlainLyrics != "" && foundSong.SyncedLyrics == "" {
-		out.Lyrics = strings.Split(foundSong.PlainLyrics, "\n")
-		out.LyricsType = 1
+		song.LyricsData.Lyrics = strings.Split(foundSong.PlainLyrics, "\n")
+		song.LyricsData.LyricsType = 1
 	} else {
-		out.LyricsType = 0
+		song.LyricsData.LyricsType = 0
 
 		syncedLyrics := strings.Split(foundSong.SyncedLyrics, "\n")
 
@@ -82,19 +82,19 @@ func (l LrcLibLyricsProvider) GetLyricsData(song structs.SongInfo) (out structs.
 			resultTimestamps[i] = timecode
 		}
 
-		out.Lyrics = resultLyrics
-		out.LyricTimestamps = resultTimestamps
+		song.LyricsData.Lyrics = resultLyrics
+		song.LyricsData.LyricTimestamps = resultTimestamps
 	}
 
-	if global.CurrentConfig.Cache.Enabled && out.LyricsType != 1 {
+	if global.CurrentConfig.Cache.Enabled && song.LyricsData.LyricsType != 1 {
 		defer func() {
-			if cache.StoreCachedLyrics(song, out) != nil {
+			if cache.StoreCachedLyrics(*song) != nil {
 				log.Println("Could not save the lyrics to the cache! Is there an issue with perms?")
 			}
 		}()
 	}
 
-	return
+	return nil
 }
 
 // Make a URL to lrclib.net/api/get to send a GET request to

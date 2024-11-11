@@ -80,7 +80,10 @@ func SyncLoop() {
 				continue
 			}
 
-			global.CurrentSong.LyricsData = lyrics.LyricsDataProviders[global.CurrentConfig.Global.LyricsProvider].GetLyricsData(global.CurrentSong)
+			if lyrics.LyricsDataProviders[global.CurrentConfig.Global.LyricsProvider].GetLyricsData(&global.CurrentSong) != nil {
+				// TODO: logger :)
+				continue
+			}
 			if global.CurrentSong.LyricsData.LyricsType == 5 {
 				global.CurrentSong.LyricsData.LyricsType = 6
 			}
@@ -156,11 +159,9 @@ func SyncLoop() {
 			prevLyric := ""
 			count := 1
 			for i, lyric := range global.CurrentSong.LyricsData.Lyrics {
-				lyric = strings.TrimSpace(lyric)
+				lyric = strings.TrimSpace(strings.ReplaceAll(lyric, "\r", ""))
 
-				if global.CurrentConfig.Lyrics.Romanization.IsEnabled() && romanization.IsSupportedAsianLang(lyric) {
-					lyric = romanization.Romanize(lyric)
-				}
+				// Apply lyrics multiplier
 				if global.CurrentConfig.Global.Output == "piped" && global.CurrentConfig.Output.Piped.ShowRepeatedLyricsMultiplier {
 					if lyric == prevLyric && lyric != "" {
 						count++
@@ -179,6 +180,11 @@ func SyncLoop() {
 				}
 
 				global.CurrentSong.LyricsData.Lyrics[i] = lyric
+			}
+
+			// Romanization
+			if lang := romanization.GetLang(global.CurrentSong.LyricsData.Lyrics); global.CurrentConfig.Lyrics.Romanization.IsEnabled() && lang != 0 {
+				global.CurrentSong.LyricsData.Lyrics = romanization.Romanize(global.CurrentSong.LyricsData.Lyrics, lang)
 			}
 
 			if global.CurrentConfig.Lyrics.TimestampOffset != 0 {

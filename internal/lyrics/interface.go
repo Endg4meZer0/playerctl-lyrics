@@ -6,7 +6,7 @@ import (
 )
 
 type LyricsDataProvider interface {
-	GetLyricsData(structs.SongInfo) structs.SongLyricsData
+	GetLyricsData(*structs.SongInfo) error
 }
 
 var LyricsDataProviders map[string]LyricsDataProvider = map[string]LyricsDataProvider{

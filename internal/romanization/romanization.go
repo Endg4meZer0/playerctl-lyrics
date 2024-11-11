@@ -11,71 +11,87 @@ import (
 	kr "github.com/srevinsaju/korean-romanizer-go"
 )
 
-var supportedAsianLangsUnicodeRangeTable = []*unicode.RangeTable{
-	unicode.Ideographic, // jp kanji and some zh characters
-	unicode.Hiragana,    // jp
-	unicode.Katakana,    // jp
-	unicode.Diacritic,   // jp (?)
-	unicode.Han,         // zh
-	unicode.Hangul,      // kr
+type Language uint
+
+var (
+	Default  Language = 0
+	Japanese Language = 1
+	Korean   Language = 2
+	Chinese  Language = 3
+)
+
+var jpUnicodeRangeTable = []*unicode.RangeTable{
+	unicode.Hiragana,
+	unicode.Katakana,
+	unicode.Diacritic,
 }
 
-func IsSupportedAsianLang(str string) bool {
-	return isChar(str, supportedAsianLangsUnicodeRangeTable)
+var zhUnicodeRangeTable = []*unicode.RangeTable{
+	unicode.Ideographic,
+	unicode.Han,
 }
 
-func Romanize(str string) (out string) {
-	out = str
+var krUnicodeRangeTable = []*unicode.RangeTable{
+	unicode.Hangul,
+}
 
-	// Sometimes there are japanese lyrics that consist only of kanji (unromanazible without a dictionary) characters
-	// They fall down to chinese romanization and that sometimes causes trouble.
-	// Until I know how to fix it properly, there will be a recover function
-	defer func() {
-		if r := recover(); r != nil {
-			out = str
-		}
-	}()
-
+func GetLang(lyrics []string) Language {
 	if global.CurrentConfig.Lyrics.Romanization.Japanese {
-		out = jp.ToRomaji(str, true)
-		if out != strings.ToLower(str) {
-			// Kanji and zh/kr characters are coded using 3 bytes.
-			// So if a character did not get romanized, this should block the uppercasing (and failing in the process)
-			if !isChar(out[:3], supportedAsianLangsUnicodeRangeTable) {
-				out = strings.ToUpper(out[:1]) + out[1:]
+		for _, l := range lyrics {
+			if isChar(l, jpUnicodeRangeTable) {
+				return 1
 			}
-			return
-		} else {
-			out = str
 		}
 	}
-
-	if global.CurrentConfig.Lyrics.Romanization.Chinese {
-		out = zhCharToPinyin(str)
-		if out != str {
-			if !isChar(out[:3], supportedAsianLangsUnicodeRangeTable) {
-				out = strings.ToUpper(out[:1]) + out[1:]
-			}
-			return
-		} else {
-			out = str
-		}
-	}
-
 	if global.CurrentConfig.Lyrics.Romanization.Korean {
-		r := kr.NewRomanizer(str)
-		out = r.Romanize()
-		if out != str {
-			if !isChar(out[:3], supportedAsianLangsUnicodeRangeTable) {
-				out = strings.ToUpper(out[:1]) + out[1:]
+		for _, l := range lyrics {
+			if isChar(l, krUnicodeRangeTable) {
+				return 2
 			}
-			return
-		} else {
-			out = str
 		}
 	}
+	if global.CurrentConfig.Lyrics.Romanization.Chinese {
+		for _, l := range lyrics {
+			if isChar(l, zhUnicodeRangeTable) {
+				return 3
+			}
+		}
+	}
+	return 0
+}
 
-	return
+func Romanize(strs []string, lang Language) []string {
+	outs := make([]string, 0, len(strs))
+	for _, str := range strs {
+		switch lang {
+		case 1:
+			out := jp.ToRomaji(str, true)
+			// Kanji and zh/kr characters are coded using unicode.Ideographic/unicode.Hangul using 3 bytes.
+			// So if a character did not get romanized, this should block the uppercasing (and crashing in the process)
+			if !isChar(out[:3], zhUnicodeRangeTable) {
+				out = strings.ToUpper(out[:1]) + out[1:]
+			}
+			outs = append(outs, out)
+		case 2:
+			r := kr.NewRomanizer(str)
+			out := r.Romanize()
+			if !isChar(out[:3], krUnicodeRangeTable) {
+				out = strings.ToUpper(out[:1]) + out[1:]
+			}
+			outs = append(outs, out)
+		case 3:
+			out := zhCharToPinyin(str)
+			if !isChar(out[:3], zhUnicodeRangeTable) {
+				out = strings.ToUpper(out[:1]) + out[1:]
+			}
+			outs = append(outs, out)
+		default:
+			outs = append(outs, str)
+		}
+
+	}
+
+	return outs
 }
 
 func isChar(s string, rangeTable []*unicode.RangeTable) bool {
