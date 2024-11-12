@@ -1,3 +1,5 @@
+# App is undergoing a huge refactor and feature additions before v0.3.0, check other branches for more info
+
 # playerctl-lyrics
 Gets data using playerctl and the currently playing song's synced lyrics from https://lrclib.net/ (if there are). Lyrics are displayed in sync with player's position.
 
