@@ -9,12 +9,12 @@ import (
 
 func TestStoreGetCycle(t *testing.T) {
 	global.CurrentConfig.Cache.CacheDir = "$XDG_CACHE_DIR/lrcsnc"
-	testSong := structs.SongInfo{
+	testSong := structs.Song{
 		Title:    "Is This A Test?",
 		Artist:   "Endg4me_",
 		Album:    "lrcsnc",
 		Duration: 12.12,
-		LyricsData: structs.SongLyricsData{
+		LyricsData: structs.LyricsData{
 			Lyrics: []string{
 				"Pam-pam-pampararam",
 				"Pam-pam-pam-param-pamparam",

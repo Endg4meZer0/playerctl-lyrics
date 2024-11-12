@@ -80,10 +80,14 @@ func SyncLoop() {
 				continue
 			}
 
-			if lyrics.LyricsDataProviders[global.CurrentConfig.Global.LyricsProvider].GetLyricsData(&global.CurrentSong) != nil {
+			lyricsData, err := lyrics.GetLyricsData(global.CurrentSong)
+			if err != nil {
 				// TODO: logger :)
 				continue
 			}
+
+			global.CurrentSong.LyricsData = lyricsData
+
 			if global.CurrentSong.LyricsData.LyricsType == 5 {
 				global.CurrentSong.LyricsData.LyricsType = 6
 			}

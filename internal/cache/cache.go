@@ -23,9 +23,9 @@ var (
 )
 
 // Returns the specified song's lyrics data from cache. The returned boolean is true if the cached data exists, is not expired and the function didn't end up with error.
-func GetCachedLyrics(song structs.SongInfo) (structs.SongLyricsData, CacheState) {
+func GetCachedLyrics(song structs.Song) (structs.LyricsData, CacheState) {
 	if !global.CurrentConfig.Cache.Enabled {
-		return structs.SongLyricsData{}, CacheStateDisabled
+		return structs.LyricsData{}, CacheStateDisabled
 	}
 	cacheDirectory := GetCacheDir()
 
@@ -33,10 +33,10 @@ func GetCachedLyrics(song structs.SongInfo) (structs.SongLyricsData, CacheState)
 	fullPath := cacheDirectory + "/" + filename + ".json"
 
 	if file, err := os.ReadFile(fullPath); err == nil {
-		var cachedData structs.SongLyricsData
+		var cachedData structs.LyricsData
 		err = json.Unmarshal(file, &cachedData)
 		if err != nil {
-			return structs.SongLyricsData{}, CacheStateNonExistant
+			return structs.LyricsData{}, CacheStateNonExistant
 		}
 
 		if global.CurrentConfig.Cache.CacheLifeSpan != 0 {
@@ -51,12 +51,12 @@ func GetCachedLyrics(song structs.SongInfo) (structs.SongLyricsData, CacheState)
 			return cachedData, CacheStateActive
 		}
 	} else {
-		return structs.SongLyricsData{}, CacheStateNonExistant
+		return structs.LyricsData{}, CacheStateNonExistant
 	}
 }
 
 // Stores the specified song's data to cache
-func StoreCachedLyrics(song structs.SongInfo) error {
+func StoreCachedLyrics(song structs.Song) error {
 	cacheDirectory := GetCacheDir()
 	if _, err := os.ReadDir(cacheDirectory); err != nil {
 		os.Mkdir(cacheDirectory, 0777)
@@ -78,7 +78,7 @@ func StoreCachedLyrics(song structs.SongInfo) error {
 }
 
 // Delete the specified song's cached data
-func RemoveCachedLyrics(song structs.SongInfo) error {
+func RemoveCachedLyrics(song structs.Song) error {
 	cacheDirectory := GetCacheDir()
 	if _, err := os.ReadDir(cacheDirectory); err != nil {
 		os.Mkdir(cacheDirectory, 0777)
@@ -89,7 +89,7 @@ func RemoveCachedLyrics(song structs.SongInfo) error {
 	fullPath := cacheDirectory + "/" + filename + ".json"
 
 	if err := os.Remove(fullPath); err != nil {
-		return fmt.Errorf("[internal/cache/RemoveCachedLyrics] ERROR: Couldn't delete the specified song's (%v) cached data. Maybe the data didn't exist in the first place?", filename)
+		return fmt.Errorf("[cache/RemoveCachedLyrics] ERROR: Couldn't delete the specified song's (%v) cached data. Maybe the data didn't exist in the first place?", filename)
 	}
 	return nil
 }
