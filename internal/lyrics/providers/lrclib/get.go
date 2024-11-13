@@ -12,50 +12,81 @@ import (
 	"lrcsnc/internal/pkg/structs"
 )
 
-type LrcLibLyricsProvider struct{}
+type ResponseStatus struct {
+	Status byte
+	Error  error
+}
+
+const (
+	Success byte = iota
+	NotFound
+	ServerError
+)
 
 // GetLyricsData gets the lyrics data for a song from the LrcLib API
 func (l LrcLibLyricsProvider) GetLyricsData(song structs.Song) (dto.LyricsDTO, error) {
-	// If the song duration is 0, return an error
 	if song.Duration == 0 {
+		// TODO: logger :)
 		return nil, fmt.Errorf("[lyrics/providers/lrclib/get] WARNING: Song duration is 0, cannot get lyrics")
 	}
 
-	// Make a URL to the LrcLib API's `get` endpoint and send a GET request to it
 	getURL := makeURLGet(song)
-	foundSongs, err := sendRequest(getURL)
+	foundSongs, status := sendRequest(getURL)
+	if status.Status == ServerError {
+		return nil, status.Error
+	}
+	matchedSongs := l.RemoveMismatches(song, foundSongs)
 
-	if err != nil {
+	if status.Status == NotFound || len(matchedSongs) == 0 {
 		getURL = makeURLSearchWithAlbum(song)
-		foundSongs, err = sendRequest(getURL)
-		if err != nil {
+		foundSongs, status = sendRequest(getURL)
+
+		if status.Status == ServerError {
+			return nil, status.Error
+		}
+		matchedSongs = l.RemoveMismatches(song, foundSongs)
+
+		if status.Status == NotFound || len(matchedSongs) == 0 {
 			getURL = makeURLSearch(song)
-			foundSongs, err = sendRequest(getURL)
+			foundSongs, status = sendRequest(getURL)
+
+			if status.Status == ServerError {
+				return nil, status.Error
+			}
+			matchedSongs = l.RemoveMismatches(song, foundSongs)
 		}
 	}
 
-	return foundSongs[0], nil
+	if len(matchedSongs) == 0 {
+		// TODO: logger :)
+		return nil, fmt.Errorf("[lyrics/providers/lrclib/get] WARNING: Couldn't find any matching songs")
+	}
+
+	return matchedSongs[0], nil
 }
 
-func sendRequest(link *url.URL) ([]lrclibdto.LrcLibDTO, error) {
+func sendRequest(link *url.URL) ([]dto.LyricsDTO, ResponseStatus) {
 	resp, err := http.Get((*link).String())
+	if resp.StatusCode == 404 {
+		return nil, ResponseStatus{Status: NotFound}
+	}
 	if err != nil || resp.StatusCode != 200 {
-		return nil, fmt.Errorf("[lyrics/providers/lrclib/get] WARNING: Couldn't get a successful response. The track is probably missing from LrcLib's library")
+		return nil, ResponseStatus{Status: ServerError, Error: fmt.Errorf("[lyrics/providers/lrclib/get] WARNING: Couldn't get a successful response: %v", err)}
 	}
 
 	body, err := io.ReadAll(resp.Body)
 	resp.Body.Close()
 	if err != nil {
-		return nil, fmt.Errorf("[lyrics/providers/lrclib/get] WARNING: Couldn't properly read the body of the response")
+		return nil, ResponseStatus{Status: ServerError, Error: fmt.Errorf("[lyrics/providers/lrclib/get] WARNING: Couldn't read response body: %v", err)}
 	}
 
 	var foundSong lrclibdto.LrcLibDTO
 	if json.Unmarshal(body, &foundSong) != nil {
-		var foundSongs []lrclibdto.LrcLibDTO = make([]lrclibdto.LrcLibDTO, 0)
+		var foundSongs []dto.LyricsDTO = make([]dto.LyricsDTO, 0)
 		json.Unmarshal(body, &foundSongs)
 
-		return foundSongs, nil
+		return foundSongs, ResponseStatus{Status: Success}
 	} else {
-		return []lrclibdto.LrcLibDTO{foundSong}, nil
+		return []dto.LyricsDTO{foundSong}, ResponseStatus{Status: Success}
 	}
 }
