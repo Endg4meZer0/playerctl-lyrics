@@ -22,9 +22,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - A configuration option to offset the lyrics by set seconds by @Endg4meZer0 in [#9](https://github.com/Endg4meZer0/playerctl-lyrics/pull/9)
 ### Changed
 - More refactoring: `cmus` and other players that report position in integer seconds are now fully supported.
-- Cache system is reverted back to JSON instead of LRC files to allow more additional data to be stored.
+- Cache system is reverted back to JSON instead of LRC files to allow more additional data to be stored ([#10](https://github.com/Endg4meZer0/playerctl-lyrics/pull/10))
 ### Fixed
-- Instrumental lyrics overlapped actual lyrics in some cases.
+- Instrumental lyrics overlapped actual lyrics in some cases ([#11](https://github.com/Endg4meZer0/playerctl-lyrics/pull/11))
 
 ## [[0.2.0](https://github.com/Endg4meZer0/playerctl-lyrics/releases/tag/v0.2.0)] - 2024-08-24
 ### Changed
