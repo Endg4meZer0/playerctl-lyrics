@@ -63,6 +63,11 @@ func GetLang(lyrics []string) Language {
 func Romanize(strs []string, lang Language) []string {
 	outs := make([]string, 0, len(strs))
 	for _, str := range strs {
+		if len(str) == 0 {
+			outs = append(outs, "")
+			continue
+		}
+
 		switch lang {
 		case 1:
 			out := jp.ToRomaji(str, true)
