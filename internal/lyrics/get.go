@@ -20,12 +20,18 @@ func GetLyricsData(song structs.Song) (structs.LyricsData, error) {
 		}
 	}
 
-	dto, err := providers.LyricsDataProviders[global.CurrentConfig.Global.LyricsProvider].GetLyricsData(song)
-	if err != nil {
-		return structs.LyricsData{LyricsType: structs.LyricsStateNotFound}, fmt.Errorf("[lyrics/providers/get] WARNING: Couldn't get the lyrics data, more below\n\t%v", err)
+	dtoList, err := providers.LyricsDataProviders[global.CurrentConfig.Global.LyricsProvider].GetLyricsDTOList(song)
+	if err != nil && err.Error() != "Song is not found" {
+		// TODO: logger :)
+		return structs.LyricsData{LyricsType: structs.LyricsStateUnknown}, fmt.Errorf("[lyrics/providers/get] WARNING: Error while getting lyrics data: %v", err)
 	}
 
-	res := dto.ToLyricsData()
+	if len(dtoList) == 0 {
+		// TODO: logger :)
+		return structs.LyricsData{LyricsType: structs.LyricsStateNotFound}, fmt.Errorf("[lyrics/providers/get] WARNING: Couldn't find any matching songs")
+	}
+
+	res := dtoList[0].ToLyricsData()
 
 	if global.CurrentConfig.Cache.Enabled && res.LyricsType != 1 {
 		defer func() {

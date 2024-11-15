@@ -2,7 +2,6 @@ package lrclib
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -12,73 +11,61 @@ import (
 	"lrcsnc/internal/pkg/structs"
 )
 
-type ResponseStatus struct {
-	Status byte
-	Error  error
+type ErrorResponse struct {
+	Value string
 }
 
-const (
-	Success byte = iota
-	NotFound
-	ClientError
-	ServerError
-)
+func (e ErrorResponse) Error() string {
+	return e.Value
+}
 
 // GetLyricsData gets the lyrics data for a song from the LrcLib API
-func (l LrcLibLyricsProvider) GetLyricsData(song structs.Song) (dto.LyricsDTO, error) {
-	if song.Duration == 0 {
-		// TODO: logger :)
-		return nil, fmt.Errorf("[lyrics/providers/lrclib/get] WARNING: Song duration is 0, cannot get lyrics")
-	}
+func (l LrcLibLyricsProvider) GetLyricsDTOList(song structs.Song) ([]dto.LyricsDTO, error) {
+	var getURL *url.URL
+	var foundSongs []dto.LyricsDTO
+	var matchedSongs []dto.LyricsDTO
+	var err error
 
-	getURL := makeURLGet(song)
-	foundSongs, status := sendRequest(getURL)
-	if status.Status == ClientError || status.Status == ServerError {
-		return nil, status.Error
-	}
-	matchedSongs := l.RemoveMismatches(song, foundSongs)
-
-	if status.Status == NotFound || len(matchedSongs) == 0 {
-		getURL = makeURLSearchWithAlbum(song)
-		foundSongs, status = sendRequest(getURL)
-
-		if status.Status == ClientError || status.Status == ServerError {
-			return nil, status.Error
-		}
-		matchedSongs = l.RemoveMismatches(song, foundSongs)
-
-		if status.Status == NotFound || len(matchedSongs) == 0 {
-			getURL = makeURLSearch(song)
-			foundSongs, status = sendRequest(getURL)
-
-			if status.Status == ClientError || status.Status == ServerError {
-				return nil, status.Error
-			}
-			matchedSongs = l.RemoveMismatches(song, foundSongs)
+	if song.Duration != 0 {
+		getURL = makeURLGet(song)
+		foundSongs, err = sendRequest(getURL)
+		if err == nil {
+			matchedSongs = dto.RemoveMismatches(song, foundSongs)
 		}
 	}
 
 	if len(matchedSongs) == 0 {
-		// TODO: logger :)
-		return nil, fmt.Errorf("[lyrics/providers/lrclib/get] WARNING: Couldn't find any matching songs")
+		getURL = makeURLSearchWithAlbum(song)
+		foundSongs, err = sendRequest(getURL)
+		if err == nil {
+			matchedSongs = dto.RemoveMismatches(song, foundSongs)
+		}
+
+		if len(matchedSongs) == 0 {
+			getURL = makeURLSearch(song)
+			foundSongs, err = sendRequest(getURL)
+			if err == nil {
+				matchedSongs = dto.RemoveMismatches(song, foundSongs)
+			}
+		}
 	}
 
-	return matchedSongs[0], nil
+	return matchedSongs, nil
 }
 
-func sendRequest(link *url.URL) ([]dto.LyricsDTO, ResponseStatus) {
+func sendRequest(link *url.URL) ([]dto.LyricsDTO, error) {
 	resp, err := http.Get((*link).String())
 	if resp.StatusCode == 404 {
-		return nil, ResponseStatus{Status: NotFound}
+		return nil, ErrorResponse{Value: "Song is not found"}
 	}
 	if err != nil || resp.StatusCode != 200 {
-		return nil, ResponseStatus{Status: ServerError, Error: fmt.Errorf("[lyrics/providers/lrclib/get] WARNING: Couldn't get a successful response: %v", err)}
+		return nil, ErrorResponse{Value: "Unknown server error"}
 	}
 
 	body, err := io.ReadAll(resp.Body)
 	resp.Body.Close()
 	if err != nil {
-		return nil, ResponseStatus{Status: ClientError, Error: fmt.Errorf("[lyrics/providers/lrclib/get] WARNING: Couldn't read response body: %v", err)}
+		return nil, ErrorResponse{Value: "Failure to read response body"}
 	}
 
 	var foundSong lrclibdto.LrcLibDTO
@@ -86,11 +73,15 @@ func sendRequest(link *url.URL) ([]dto.LyricsDTO, ResponseStatus) {
 		var foundSongs []dto.LyricsDTO = make([]dto.LyricsDTO, 0)
 		err = json.Unmarshal(body, &foundSongs)
 		if err != nil {
-			return nil, ResponseStatus{Status: ClientError, Error: fmt.Errorf("[lyrics/providers/lrclib/get] WARNING: An error occured while unmarshalling the found songs")}
+			return nil, ErrorResponse{Value: "Unmarshal error"}
 		}
 
-		return foundSongs, ResponseStatus{Status: Success}
+		if len(foundSongs) == 0 {
+			return foundSongs, ErrorResponse{Value: "Song is not found"}
+		}
+
+		return foundSongs, nil
 	} else {
-		return []dto.LyricsDTO{foundSong}, ResponseStatus{Status: Success}
+		return []dto.LyricsDTO{foundSong}, nil
 	}
 }

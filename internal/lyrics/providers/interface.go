@@ -8,8 +8,7 @@ import (
 
 type LyricsDataProvider interface {
 	// Gets the lyrics data for a song in the form of LyricsDTO for later handling
-	GetLyricsData(structs.Song) (dto.LyricsDTO, error)
-	RemoveMismatches(structs.Song, []dto.LyricsDTO) []dto.LyricsDTO
+	GetLyricsDTOList(structs.Song) ([]dto.LyricsDTO, error)
 }
 
 var LyricsDataProviders map[string]LyricsDataProvider = map[string]LyricsDataProvider{
