@@ -20,6 +20,7 @@ type ResponseStatus struct {
 const (
 	Success byte = iota
 	NotFound
+	ClientError
 	ServerError
 )
 
@@ -32,7 +33,7 @@ func (l LrcLibLyricsProvider) GetLyricsData(song structs.Song) (dto.LyricsDTO, e
 
 	getURL := makeURLGet(song)
 	foundSongs, status := sendRequest(getURL)
-	if status.Status == ServerError {
+	if status.Status == ClientError || status.Status == ServerError {
 		return nil, status.Error
 	}
 	matchedSongs := l.RemoveMismatches(song, foundSongs)
@@ -41,7 +42,7 @@ func (l LrcLibLyricsProvider) GetLyricsData(song structs.Song) (dto.LyricsDTO, e
 		getURL = makeURLSearchWithAlbum(song)
 		foundSongs, status = sendRequest(getURL)
 
-		if status.Status == ServerError {
+		if status.Status == ClientError || status.Status == ServerError {
 			return nil, status.Error
 		}
 		matchedSongs = l.RemoveMismatches(song, foundSongs)
@@ -50,7 +51,7 @@ func (l LrcLibLyricsProvider) GetLyricsData(song structs.Song) (dto.LyricsDTO, e
 			getURL = makeURLSearch(song)
 			foundSongs, status = sendRequest(getURL)
 
-			if status.Status == ServerError {
+			if status.Status == ClientError || status.Status == ServerError {
 				return nil, status.Error
 			}
 			matchedSongs = l.RemoveMismatches(song, foundSongs)
@@ -77,13 +78,16 @@ func sendRequest(link *url.URL) ([]dto.LyricsDTO, ResponseStatus) {
 	body, err := io.ReadAll(resp.Body)
 	resp.Body.Close()
 	if err != nil {
-		return nil, ResponseStatus{Status: ServerError, Error: fmt.Errorf("[lyrics/providers/lrclib/get] WARNING: Couldn't read response body: %v", err)}
+		return nil, ResponseStatus{Status: ClientError, Error: fmt.Errorf("[lyrics/providers/lrclib/get] WARNING: Couldn't read response body: %v", err)}
 	}
 
 	var foundSong lrclibdto.LrcLibDTO
 	if err := json.Unmarshal(body, &foundSong); err != nil {
 		var foundSongs []dto.LyricsDTO = make([]dto.LyricsDTO, 0)
-		json.Unmarshal(body, &foundSongs)
+		err = json.Unmarshal(body, &foundSongs)
+		if err != nil {
+			return nil, ResponseStatus{Status: ClientError, Error: fmt.Errorf("[lyrics/providers/lrclib/get] WARNING: An error occured while unmarshalling the found songs")}
+		}
 
 		return foundSongs, ResponseStatus{Status: Success}
 	} else {
