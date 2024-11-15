@@ -7,13 +7,13 @@ import (
 )
 
 type LrcLibDTO struct {
-	Title        string `json:"trackName"`
-	Artist       string `json:"artistName"`
-	Album        string `json:"albumName"`
-	Duration     uint64 `json:"duration"`
-	Instrumental bool   `json:"instrumental"`
-	PlainLyrics  string `json:"plainLyrics"`
-	SyncedLyrics string `json:"syncedLyrics"`
+	Title        string  `json:"trackName"`
+	Artist       string  `json:"artistName"`
+	Album        string  `json:"albumName"`
+	Duration     float64 `json:"duration"`
+	Instrumental bool    `json:"instrumental"`
+	PlainLyrics  string  `json:"plainLyrics"`
+	SyncedLyrics string  `json:"syncedLyrics"`
 }
 
 func (dto LrcLibDTO) ToLyricsData() (out structs.LyricsData) {

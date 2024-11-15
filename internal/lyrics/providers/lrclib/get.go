@@ -81,7 +81,7 @@ func sendRequest(link *url.URL) ([]dto.LyricsDTO, ResponseStatus) {
 	}
 
 	var foundSong lrclibdto.LrcLibDTO
-	if json.Unmarshal(body, &foundSong) != nil {
+	if err := json.Unmarshal(body, &foundSong); err != nil {
 		var foundSongs []dto.LyricsDTO = make([]dto.LyricsDTO, 0)
 		json.Unmarshal(body, &foundSongs)
 
