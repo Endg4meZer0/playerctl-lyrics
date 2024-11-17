@@ -14,17 +14,17 @@ import (
 
 type MprisPlayerProvider struct{}
 
-func (m *MprisPlayerProvider) GetSongInfo() (structs.SongInfo, error) {
-	var out structs.SongInfo
+func (m *MprisPlayerProvider) GetSongInfo() (structs.Song, error) {
+	var out structs.Song
 	var dbusconn = sessions.MediaSessions["mpris"].GetSession()
 	if dbusconn == nil {
 		out.LyricsData.LyricsType = 4
-		return out, fmt.Errorf("[player/providers/mpris/GetSongInfo] ERROR: D-Bus connection does not exist at the moment")
+		return out, fmt.Errorf("[player/providers/mpris] ERROR: D-Bus connection does not exist at the moment")
 	}
 	var player = sessions.MediaSessions["mpris"].GetPlayer()
 	if player == nil {
 		out.LyricsData.LyricsType = 4
-		return out, fmt.Errorf("[player/providers/mpris/GetSongInfo] ERROR: Player handler does not exist at the moment")
+		return out, fmt.Errorf("[player/providers/mpris] ERROR: Player handler does not exist at the moment")
 	}
 
 	// FIXME: Handling MPRIS directly is not really fail-safe yet,
@@ -37,7 +37,7 @@ func (m *MprisPlayerProvider) GetSongInfo() (structs.SongInfo, error) {
 	metadata, err := player.(*mpris.Player).GetMetadata()
 	if err != nil {
 		out.LyricsData.LyricsType = 4
-		return out, fmt.Errorf("[player/providers/mpris/GetSongInfo] ERROR: Failed to get metadata from existing player handler")
+		return out, fmt.Errorf("[player/providers/mpris] ERROR: Failed to get metadata from existing player handler")
 	}
 
 	song, ok1 := metadata["xesam:title"]
@@ -61,26 +61,25 @@ func (m *MprisPlayerProvider) GetSongInfo() (structs.SongInfo, error) {
 	return out, nil
 }
 
-func (m *MprisPlayerProvider) GetPlayerInfo() (structs.PlayerInfo, error) {
-	var out structs.PlayerInfo
+func (m *MprisPlayerProvider) GetPlayerInfo() (structs.Player, error) {
+	var out structs.Player
 	var dbusconn = sessions.MediaSessions["mpris"].GetSession()
 	if dbusconn.(*dbus.Conn) == nil {
-		return out, fmt.Errorf("[player/providers/mpris/GetPlayerInfo] ERROR: D-Bus connection does not exist at the moment")
+		return out, fmt.Errorf("[player/providers/mpris] ERROR: D-Bus connection does not exist at the moment")
 	}
 
 	var connPlayer = sessions.MediaSessions["mpris"].GetPlayer()
 	if connPlayer.(*mpris.Player) != nil {
-		identity, err := connPlayer.(*mpris.Player).GetIdentity()
+		_, err := connPlayer.(*mpris.Player).GetIdentity()
 		if err == nil {
-			out.PlayerName = identity
 			playing, err := connPlayer.(*mpris.Player).GetPlaybackStatus()
 			if err != nil {
-				return structs.PlayerInfo{}, fmt.Errorf("[player/providers/mpris/GetPlayerInfo] ERROR: Failed to get playback status using existing player handler")
+				return structs.Player{}, fmt.Errorf("[player/providers/mpris] ERROR: Failed to get playback status using existing player handler")
 			}
 			out.IsPlaying = playing == mpris.PlaybackPlaying
 			pos, err := connPlayer.(*mpris.Player).GetPosition()
 			if err != nil {
-				return structs.PlayerInfo{}, fmt.Errorf("[player/providers/mpris/GetPlayerInfo] ERROR: Failed to get player position using existing player handler")
+				return structs.Player{}, fmt.Errorf("[player/providers/mpris] ERROR: Failed to get player position using existing player handler")
 			}
 			out.Position = pos
 			return out, nil
@@ -96,10 +95,10 @@ func (m *MprisPlayerProvider) GetPlayerInfo() (structs.PlayerInfo, error) {
 
 	playerNames, err := mpris.List(dbusconn.(*dbus.Conn))
 	if err != nil {
-		return structs.PlayerInfo{}, fmt.Errorf("[player/providers/mpris/GetPlayerInfo] ERROR: Failed to get list of players using existing D-Bus connection")
+		return structs.Player{}, fmt.Errorf("[player/providers/mpris/GetPlayerInfo] ERROR: Failed to get list of players using existing D-Bus connection")
 	}
 	if len(playerNames) == 0 {
-		return structs.PlayerInfo{}, nil
+		return structs.Player{}, nil
 	}
 
 	var player *mpris.Player = nil
@@ -136,20 +135,15 @@ func (m *MprisPlayerProvider) GetPlayerInfo() (structs.PlayerInfo, error) {
 		player = mpris.New(dbusconn.(*dbus.Conn), playerNames[0])
 	}
 
-	identity, err := player.GetIdentity()
-	if err != nil {
-		return structs.PlayerInfo{}, fmt.Errorf("[player/providers/mpris/GetPlayerInfo] ERROR: Failed to get player identity using newly found player handler")
-	}
 	status, err := player.GetPlaybackStatus()
 	if err != nil {
-		return structs.PlayerInfo{}, fmt.Errorf("[player/providers/mpris/GetPlayerInfo] ERROR: Failed to get playback status using newly found player handler")
+		return structs.Player{}, fmt.Errorf("[player/providers/mpris/GetPlayerInfo] ERROR: Failed to get playback status using newly found player handler")
 	}
 	position, err := player.GetPosition()
 	if err != nil {
-		return structs.PlayerInfo{}, fmt.Errorf("[player/providers/mpris/GetPlayerInfo] ERROR: Failed to get player position using newly found player handler")
+		return structs.Player{}, fmt.Errorf("[player/providers/mpris/GetPlayerInfo] ERROR: Failed to get player position using newly found player handler")
 	}
 
-	out.PlayerName = identity
 	out.IsPlaying = status == mpris.PlaybackPlaying
 	out.Position = position
 

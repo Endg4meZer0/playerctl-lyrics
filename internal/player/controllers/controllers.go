@@ -5,6 +5,5 @@ type PlayerController interface {
 }
 
 var PlayerControllers map[string]PlayerController = map[string]PlayerController{
-	"mpris":     &MprisPlayerController{},
-	"playerctl": &PlayerctlPlayerController{},
+	"mpris": &MprisPlayerController{},
 }
