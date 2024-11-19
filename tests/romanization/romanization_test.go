@@ -8,9 +8,9 @@ import (
 )
 
 func TestGetLang(t *testing.T) {
-	global.CurrentConfig.Lyrics.Romanization.Japanese = true
-	global.CurrentConfig.Lyrics.Romanization.Chinese = true
-	global.CurrentConfig.Lyrics.Romanization.Korean = true
+	global.Config.Lyrics.Romanization.Japanese = true
+	global.Config.Lyrics.Romanization.Chinese = true
+	global.Config.Lyrics.Romanization.Korean = true
 	answerJapanese := romanization.GetLang(
 		[]string{
 			"something something Lorem Ipsum",
@@ -52,9 +52,9 @@ func TestGetLang(t *testing.T) {
 }
 
 func TestRomanize(t *testing.T) {
-	global.CurrentConfig.Lyrics.Romanization.Japanese = true
-	global.CurrentConfig.Lyrics.Romanization.Chinese = true
-	global.CurrentConfig.Lyrics.Romanization.Korean = true
+	global.Config.Lyrics.Romanization.Japanese = true
+	global.Config.Lyrics.Romanization.Chinese = true
+	global.Config.Lyrics.Romanization.Korean = true
 	answerJapanese := romanization.Romanize(
 		[]string{
 			"ああ？私に近づいてるの？",

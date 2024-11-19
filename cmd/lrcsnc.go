@@ -41,7 +41,7 @@ func Start() {
 	loop.SyncLoop()
 
 	// Initialize the output
-	switch global.CurrentConfig.Global.Output {
+	switch global.Config.Global.Output {
 	case "piped":
 		go piped.Init()
 		defer piped.CloseOutput()

@@ -9,6 +9,5 @@ type MediaSession interface {
 }
 
 var MediaSessions map[string]MediaSession = map[string]MediaSession{
-	"mpris":     &DBusSession{conn: nil},
-	"playerctl": &PlayerctlSession{},
+	"mpris": &DBusSession{conn: nil},
 }

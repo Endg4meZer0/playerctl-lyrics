@@ -36,21 +36,21 @@ var krUnicodeRangeTable = []*unicode.RangeTable{
 }
 
 func GetLang(lyrics []string) Language {
-	if global.CurrentConfig.Lyrics.Romanization.Japanese {
+	if global.Config.Lyrics.Romanization.Japanese {
 		for _, l := range lyrics {
 			if isChar(l, jpUnicodeRangeTable) {
 				return 1
 			}
 		}
 	}
-	if global.CurrentConfig.Lyrics.Romanization.Korean {
+	if global.Config.Lyrics.Romanization.Korean {
 		for _, l := range lyrics {
 			if isChar(l, krUnicodeRangeTable) {
 				return 2
 			}
 		}
 	}
-	if global.CurrentConfig.Lyrics.Romanization.Chinese {
+	if global.Config.Lyrics.Romanization.Chinese {
 		for _, l := range lyrics {
 			if isChar(l, zhUnicodeRangeTable) {
 				return 3

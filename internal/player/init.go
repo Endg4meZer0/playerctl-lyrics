@@ -7,7 +7,7 @@ import (
 )
 
 func InitSession() error {
-	init, ok := sessions.MediaSessions[global.CurrentConfig.Player.PlayerProvider]
+	init, ok := sessions.MediaSessions[global.Config.Player.PlayerProvider]
 	if !ok {
 		return fmt.Errorf("FATAL: The specified player provider doesn't have a session handler")
 	}
@@ -16,7 +16,7 @@ func InitSession() error {
 }
 
 func CloseSession() error {
-	provider, ok := sessions.MediaSessions[global.CurrentConfig.Player.PlayerProvider]
+	provider, ok := sessions.MediaSessions[global.Config.Player.PlayerProvider]
 	if !ok {
 		return fmt.Errorf("FATAL: The specified player provider doesn't have a session handler")
 	}

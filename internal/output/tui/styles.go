@@ -11,27 +11,27 @@ var (
 		return gloss.NewStyle().AlignHorizontal(gloss.Center).Bold(true)
 	}
 	styleBefore = func() gloss.Style {
-		return styleLyric().Foreground(gloss.Color(global.CurrentConfig.Output.TUI.Colors.LyricBefore))
+		return styleLyric().Foreground(gloss.Color(global.Config.Output.TUI.Colors.LyricBefore))
 	}
 	styleCurrent = func() gloss.Style {
-		return styleLyric().Foreground(gloss.Color(global.CurrentConfig.Output.TUI.Colors.LyricCurrent))
+		return styleLyric().Foreground(gloss.Color(global.Config.Output.TUI.Colors.LyricCurrent))
 	}
 	styleAfter = func() gloss.Style {
-		return styleLyric().Foreground(gloss.Color(global.CurrentConfig.Output.TUI.Colors.LyricAfter)).Faint(true)
+		return styleLyric().Foreground(gloss.Color(global.Config.Output.TUI.Colors.LyricAfter)).Faint(true)
 	}
 	styleCursor = func() gloss.Style {
-		return styleLyric().Foreground(gloss.Color(global.CurrentConfig.Output.TUI.Colors.LyricCursor))
+		return styleLyric().Foreground(gloss.Color(global.Config.Output.TUI.Colors.LyricCursor))
 	}
 	styleBorderCursor = func() gloss.Style {
-		return gloss.NewStyle().Border(gloss.ThickBorder(), true, false).BorderForeground(gloss.Color(global.CurrentConfig.Output.TUI.Colors.BorderCursor))
+		return gloss.NewStyle().Border(gloss.ThickBorder(), true, false).BorderForeground(gloss.Color(global.Config.Output.TUI.Colors.BorderCursor))
 	}
 	styleTimestamp = func() gloss.Style {
-		return gloss.NewStyle().Foreground(gloss.Color(global.CurrentConfig.Output.TUI.Colors.Timestamp))
+		return gloss.NewStyle().Foreground(gloss.Color(global.Config.Output.TUI.Colors.Timestamp))
 	}
 	styleTimestampCurrent = func() gloss.Style {
-		return gloss.NewStyle().Foreground(gloss.Color(global.CurrentConfig.Output.TUI.Colors.TimestampCurrent))
+		return gloss.NewStyle().Foreground(gloss.Color(global.Config.Output.TUI.Colors.TimestampCurrent))
 	}
 	styleTimestampCursor = func() gloss.Style {
-		return gloss.NewStyle().Foreground(gloss.Color(global.CurrentConfig.Output.TUI.Colors.TimestampCursor)).Faint(true)
+		return gloss.NewStyle().Foreground(gloss.Color(global.Config.Output.TUI.Colors.TimestampCursor)).Faint(true)
 	}
 )

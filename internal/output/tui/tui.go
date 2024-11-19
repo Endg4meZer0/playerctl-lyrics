@@ -54,10 +54,10 @@ func InitialModel() model {
 		showTimestamps:  false,
 		showProgressBar: true,
 
-		position: int(global.CurrentPlayer.Position),
-		duration: int(global.CurrentSong.Duration),
+		position: int(global.Player.Position),
+		duration: int(global.Player.Song.Duration),
 
-		progressBar: progress.New(progress.WithSolidFill(global.CurrentConfig.Output.TUI.Colors.ProgressBarColor)),
+		progressBar: progress.New(progress.WithSolidFill(global.Config.Output.TUI.Colors.ProgressBarColor)),
 		help:        helpModel,
 	}
 }
@@ -79,15 +79,15 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 
 	case songInfoChanged:
-		if global.CurrentSong.LyricsData.LyricsType >= 2 {
+		if global.Player.Song.LyricsData.LyricsType >= 2 {
 			m.lyricLines = [][]string{{"───"}}
 		} else {
-			m.lyricLines = make([][]string, 0, len(global.CurrentSong.LyricsData.Lyrics))
-			for _, s := range global.CurrentSong.LyricsData.Lyrics {
+			m.lyricLines = make([][]string, 0, len(global.Player.Song.LyricsData.Lyrics))
+			for _, s := range global.Player.Song.LyricsData.Lyrics {
 				m.lyricLines = append(m.lyricLines, m.lyricWrap(s))
 			}
 		}
-		switch global.CurrentSong.LyricsData.LyricsType {
+		switch global.Player.Song.LyricsData.LyricsType {
 		case 1:
 			m.header = " (unsynced)"
 		case 6:
@@ -97,7 +97,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		m.lyricViewport.SetContent(gloss.PlaceHorizontal(m.w, gloss.Center, m.lyricsView()))
 		m.lyricViewport.SetYOffset(m.lyricViewport.Height)
-		if global.CurrentSong.LyricsData.LyricsType != 0 {
+		if global.Player.Song.LyricsData.LyricsType != 0 {
 			m.followSync = false
 		} else {
 			m.followSync = true
@@ -106,12 +106,12 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, watchSongInfoChanges()
 
 	case playerInfoChanged:
-		m.position = int(global.CurrentPlayer.Position)
-		m.duration = int(global.CurrentSong.Duration)
+		m.position = int(global.Player.Position)
+		m.duration = int(global.Player.Song.Duration)
 		return m, tea.Batch(watchPlayerInfoChanges(), m.progressBar.SetPercent(float64(m.position)/float64(m.duration)))
 
 	case animateProgressBarTick:
-		if global.CurrentPlayer.IsPlaying {
+		if global.Player.IsPlaying {
 			m.position++
 		}
 		return m, m.progressBarTick()
@@ -132,8 +132,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.w = msg.Width
 		m.h = msg.Height
-		m.lyricLines = make([][]string, 0, len(global.CurrentSong.LyricsData.Lyrics))
-		for _, s := range global.CurrentSong.LyricsData.Lyrics {
+		m.lyricLines = make([][]string, 0, len(global.Player.Song.LyricsData.Lyrics))
+		for _, s := range global.Player.Song.LyricsData.Lyrics {
 			m.lyricLines = append(m.lyricLines, m.lyricWrap(s))
 		}
 		headerHeight := gloss.Height(m.headerView())
@@ -166,11 +166,11 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 
 		case "enter":
-			if global.CurrentSong.LyricsData.LyricsType != 0 || m.currentLyric == -1 {
+			if global.Player.Song.LyricsData.LyricsType != 0 || m.currentLyric == -1 {
 				return m, nil
 			}
 
-			if err := controllers.PlayerControllers[global.CurrentConfig.Player.PlayerProvider].SeekTo(global.CurrentSong.LyricsData.LyricTimestamps[m.cursor]); err != nil {
+			if err := controllers.PlayerControllers[global.Config.Player.PlayerProvider].SeekTo(global.Player.Song.LyricsData.LyricTimestamps[m.cursor]); err != nil {
 				OverwriteReceived <- "Couldn't seek to this lyric!" // TODO: "Check the log for more information"
 			}
 
@@ -199,7 +199,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.lyricViewport.SetYOffset(min(m.lyricViewport.TotalLineCount()-m.lyricViewport.Height, max(0, m.calcYOffset(m.cursor))))
 
 		case "f":
-			if global.CurrentSong.LyricsData.LyricsType == 0 {
+			if global.Player.Song.LyricsData.LyricsType == 0 {
 				m.followSync = !m.followSync
 				if !m.followSync {
 					if m.cursor == -1 {
@@ -214,8 +214,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		case "t":
 			m.showTimestamps = !m.showTimestamps
-			m.lyricLines = make([][]string, 0, len(global.CurrentSong.LyricsData.Lyrics))
-			for _, s := range global.CurrentSong.LyricsData.Lyrics {
+			m.lyricLines = make([][]string, 0, len(global.Player.Song.LyricsData.Lyrics))
+			for _, s := range global.Player.Song.LyricsData.Lyrics {
 				m.lyricLines = append(m.lyricLines, m.lyricWrap(s))
 			}
 			m.lyricViewport.SetContent(gloss.PlaceHorizontal(m.w, gloss.Center, m.lyricsView()))
@@ -249,7 +249,7 @@ func (m model) headerView() string {
 	if m.overwrite != "" {
 		title = gloss.NewStyle().Foreground(gloss.Color("11")).AlignHorizontal(gloss.Center).Render(m.overwrite)
 	} else {
-		title = gloss.NewStyle().Foreground(gloss.Color("15")).AlignHorizontal(gloss.Center).Render(fmt.Sprintf("%s - %s%s", global.CurrentSong.Artist, global.CurrentSong.Title, m.header))
+		title = gloss.NewStyle().Foreground(gloss.Color("15")).AlignHorizontal(gloss.Center).Render(fmt.Sprintf("%s - %s%s", global.Player.Song.Artist, global.Player.Song.Title, m.header))
 	}
 	return gloss.NewStyle().BorderBottom(true).BorderStyle(gloss.NormalBorder()).Render(gloss.PlaceHorizontal(m.w-4, gloss.Center, title))
 }
@@ -268,7 +268,7 @@ func (m model) footerView() string {
 }
 
 func (m model) lyricsView() string {
-	switch global.CurrentSong.LyricsData.LyricsType {
+	switch global.Player.Song.LyricsData.LyricsType {
 	case 2:
 		return "Listen to the instrumental... ♪♪♪"
 	case 3:
@@ -311,7 +311,7 @@ func (m model) lyricsView() string {
 			if !m.followSync {
 				if i == m.cursor {
 					stylizedLyrics = make([]string, 0, len(lyricLine))
-					if i == m.currentLyric && global.CurrentSong.LyricsData.LyricsType == 0 {
+					if i == m.currentLyric && global.Player.Song.LyricsData.LyricsType == 0 {
 						for _, l := range lyricLine {
 							stylizedLyrics = append(stylizedLyrics, styleCurrent().Render(l))
 						}
@@ -333,12 +333,12 @@ func (m model) lyricsView() string {
 				} else if i == m.cursor {
 					style = styleTimestampCursor()
 				}
-				timestampView = style.Render(timestampIntoString(global.CurrentSong.LyricsData.LyricTimestamps[i])) + " "
+				timestampView = style.Render(timestampIntoString(global.Player.Song.LyricsData.LyricTimestamps[i])) + " "
 			}
 
 			line = gloss.JoinHorizontal(gloss.Center, timestampView, line)
 
-			if i == m.currentLyric && i == m.cursor && !m.followSync && global.CurrentSong.LyricsData.LyricsType == 0 {
+			if i == m.currentLyric && i == m.cursor && !m.followSync && global.Player.Song.LyricsData.LyricsType == 0 {
 				line = styleBorderCursor().Render(line)
 			}
 

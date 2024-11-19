@@ -24,7 +24,7 @@ var (
 
 // Returns the specified song's lyrics data from cache. The returned boolean is true if the cached data exists, is not expired and the function didn't end up with error.
 func GetCachedLyrics(song structs.Song) (structs.LyricsData, CacheState) {
-	if !global.CurrentConfig.Cache.Enabled {
+	if !global.Config.Cache.Enabled {
 		return structs.LyricsData{}, CacheStateDisabled
 	}
 	cacheDirectory := GetCacheDir()
@@ -39,9 +39,9 @@ func GetCachedLyrics(song structs.Song) (structs.LyricsData, CacheState) {
 			return structs.LyricsData{}, CacheStateNonExistant
 		}
 
-		if global.CurrentConfig.Cache.CacheLifeSpan != 0 {
+		if global.Config.Cache.CacheLifeSpan != 0 {
 			cacheStats, _ := os.Lstat(fullPath)
-			isExpired := time.Since(cacheStats.ModTime()).Hours() <= float64(global.CurrentConfig.Cache.CacheLifeSpan)*24
+			isExpired := time.Since(cacheStats.ModTime()).Hours() <= float64(global.Config.Cache.CacheLifeSpan)*24
 			if isExpired {
 				return cachedData, CacheStateExpired
 			} else {
@@ -95,7 +95,7 @@ func RemoveCachedLyrics(song structs.Song) error {
 }
 
 func GetCacheDir() string {
-	cacheDirectory := global.CurrentConfig.Cache.CacheDir
+	cacheDirectory := global.Config.Cache.CacheDir
 	if strings.Contains(cacheDirectory, "$XDG_CACHE_DIR") && os.Getenv("$XDG_CACHE_DIR") == "" {
 		cacheDirectory = strings.ReplaceAll(cacheDirectory, "$XDG_CACHE_DIR", "$HOME/.cache")
 	}

@@ -8,7 +8,7 @@ import (
 )
 
 func TestStoreGetCycle(t *testing.T) {
-	global.CurrentConfig.Cache.CacheDir = "$XDG_CACHE_DIR/lrcsnc"
+	global.Config.Cache.CacheDir = "$XDG_CACHE_DIR/lrcsnc"
 	testSong := structs.Song{
 		Title:    "Is This A Test?",
 		Artist:   "Endg4me_",
@@ -31,10 +31,10 @@ func TestStoreGetCycle(t *testing.T) {
 		t.Errorf("[tests/cache/TestStoreGetCycle] %v", err)
 	}
 
-	global.CurrentConfig.Cache.Enabled = false
+	global.Config.Cache.Enabled = false
 	answerDisabled, cacheStateDisabled := cache.GetCachedLyrics(testSong)
 
-	global.CurrentConfig.Cache.Enabled = true
+	global.Config.Cache.Enabled = true
 	answerInfLifeSpan, cacheStateInfLifeSpan := cache.GetCachedLyrics(testSong)
 
 	if len(answerDisabled.Lyrics) != 0 || answerDisabled.LyricsType != 0 || len(answerDisabled.LyricTimestamps) != 0 || cacheStateDisabled != cache.CacheStateDisabled {

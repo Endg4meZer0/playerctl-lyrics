@@ -69,14 +69,14 @@ func HandleFlags() {
 			os.MkdirAll(*cacheDirectory, 0777)
 			os.Chmod(*cacheDirectory, 0777)
 		}
-		global.CurrentConfig.Cache.CacheDir = *cacheDirectory
+		global.Config.Cache.CacheDir = *cacheDirectory
 	}
 
 	if *isPiped {
-		global.CurrentConfig.Global.Output = "piped"
+		global.Config.Global.Output = "piped"
 	}
 
-	if *outputFilePath != "" && global.CurrentConfig.Global.Output == "piped" {
+	if *outputFilePath != "" && global.Config.Global.Output == "piped" {
 		t := os.ExpandEnv(*outputFilePath)
 		piped.UpdateOutputDestination(t)
 	}
@@ -86,7 +86,7 @@ func HandleFlags() {
 			log.Fatalln("The -clear-cache flag is set, but no filters are! Check -help for more information.")
 		}
 
-		currentCacheDir := global.CurrentConfig.Cache.CacheDir
+		currentCacheDir := global.Config.Cache.CacheDir
 
 		if strings.Contains(currentCacheDir, "$XDG_CACHE_DIR") && os.Getenv("$XDG_CACHE_DIR") == "" {
 			currentCacheDir = strings.ReplaceAll(currentCacheDir, "$XDG_CACHE_DIR", "$HOME/.cache")

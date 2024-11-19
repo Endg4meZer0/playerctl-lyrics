@@ -13,7 +13,7 @@ import (
 
 // TODO: move to KDL for configuration
 
-var currentConfigPath string
+var ConfigPath string
 
 func ReadConfig(path string) error {
 	configFile, err := os.ReadFile(os.ExpandEnv(path))
@@ -34,8 +34,8 @@ func ReadConfig(path string) error {
 	}
 
 	if !fatal {
-		global.CurrentConfig = config
-		currentConfigPath = path
+		global.Config = config
+		ConfigPath = path
 	} else {
 		return fmt.Errorf("FATAL ERRORS IN THE CONFIG WERE DETECTED! Rolling back... ")
 	}
@@ -44,7 +44,7 @@ func ReadConfig(path string) error {
 }
 
 func ReadConfigFromDefaultPath() error {
-	global.CurrentConfig = defaultConfig
+	global.Config = defaultConfig
 
 	defaultDirectory, err := os.UserConfigDir()
 	if err != nil {
@@ -85,19 +85,19 @@ func ReadConfigFromDefaultPath() error {
 		}
 
 		if !fatal {
-			global.CurrentConfig = config
+			global.Config = config
 		} else {
 			return fmt.Errorf("FATAL ERRORS IN THE CONFIG WERE DETECTED! Rolling back... ")
 		}
 	}
 
-	currentConfigPath = defaultDirectory + "/config.json"
+	ConfigPath = defaultDirectory + "/config.json"
 
 	return nil
 }
 
 func UpdateConfig() {
-	configFile, err := os.ReadFile(os.ExpandEnv(currentConfigPath))
+	configFile, err := os.ReadFile(os.ExpandEnv(ConfigPath))
 	if err != nil {
 		piped.PrintOverwrite("Errors while reading config! Falling back...")
 		return
@@ -117,7 +117,7 @@ func UpdateConfig() {
 	}
 
 	if !fatal {
-		global.CurrentConfig = config
+		global.Config = config
 	} else {
 		piped.PrintOverwrite("Errors while parsing config! Falling back...")
 		return

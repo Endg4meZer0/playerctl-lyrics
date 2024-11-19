@@ -2,4 +2,4 @@ package global
 
 import "lrcsnc/internal/pkg/structs"
 
-var CurrentPlayer structs.Player
+var Player structs.Player = structs.Player{Song: structs.Song{LyricsData: structs.LyricsData{LyricsType: 5}}}

@@ -15,77 +15,60 @@ import (
 
 func SyncLoop() {
 	// Channels to communicate between goroutines
+	playerChanges := player.PlayerProviders[global.Config.Player.PlayerProvider].Subscribe()
 	songChanged := make(chan bool, 1)
 	fullLyrChan := make(chan bool, 1)
 	var err error
 
 	// Initial player data
-	global.CurrentPlayer, err = player.PlayerProviders[global.CurrentConfig.Player.PlayerProvider].GetPlayerInfo()
+	global.Player, err = player.PlayerProviders[global.Config.Player.PlayerProvider].GetInfo()
 	if err != nil {
 		// TODO: logger :)
 	}
-
-	global.CurrentSong, err = player.PlayerProviders[global.CurrentConfig.Player.PlayerProvider].GetSongInfo()
-	if err != nil {
-		// TODO: logger :)
-	}
-
-	songChanged <- true
 
 	// Set up timers and tickers
-	checkerTicker := time.NewTicker(time.Duration(global.CurrentConfig.Player.SongCheckInterval*1000) * time.Millisecond)
-	positionCheckTimer := time.NewTimer(time.Second)
-	positionInnerCheckTicker := time.NewTicker(time.Second)
-	positionInnerCheckTicker.Stop()
+	positionFollowTick := make(chan bool, 3)
 
 	// Some additional syncing variables to make up for the time spent on getting the data itself
 	position := 0.0
 	var timeBeforeGettingLyrics time.Time
 
-	// Goroutine to check for changes in currently playing song
+	// Goroutine that reacts to the changes in player's state
 	go func() {
 		for {
-			<-checkerTicker.C
-			playerData, err := player.PlayerProviders[global.CurrentConfig.Player.PlayerProvider].GetPlayerInfo()
-			if err != nil {
-				// TODO: logger :)
-				continue
-			}
-			song, err := player.PlayerProviders[global.CurrentConfig.Player.PlayerProvider].GetSongInfo()
-			if err != nil {
-				// TODO: logger :)
-				continue
-			}
-			if song.Title != global.CurrentSong.Title || song.Artist != global.CurrentSong.Artist || song.Album != global.CurrentSong.Album || song.Duration != global.CurrentSong.Duration {
-				position = playerData.Position
+			newState := <-playerChanges
+			positionFollowTick <- true
+
+			if newState.Song.Title != global.Player.Song.Title || newState.Song.Artist != global.Player.Song.Artist || newState.Song.Album != global.Player.Song.Album || newState.Song.Duration != global.Player.Song.Duration {
+				position = newState.Position
 				timeBeforeGettingLyrics = time.Now()
-				global.CurrentSong = song
+				global.Player.Song = newState.Song
 
 				songChanged <- true
 			}
 		}
 	}()
 
-	// Goroutine to wait for incoming song metadata (lyrics and instrumental bool)
+	// Goroutine that handles the process of getting lyrics data
 	go func() {
 		for {
 			<-songChanged
 
-			output.OutputControllers[global.CurrentConfig.Global.Output].OnSongInfoChange()
+			output.OutputControllers[global.Config.Global.Output].OnSongInfoChange()
 
 			// If the duration equals 0s, then there are no supported players out there.
-			if global.CurrentSong.Duration == 0 {
-				global.CurrentSong.LyricsData.LyricsType = 4
+			if global.Player.Song.Duration == 0 {
+				global.Player.Song.LyricsData.LyricsType = 4
 				fullLyrChan <- false
 				continue
 			}
 
-			lyricsData, err := lyrics.GetLyricsData(global.CurrentSong)
+			lyricsData, err := lyrics.GetLyricsData(global.Player.Song)
 			if err != nil {
 				// TODO: logger :)
 			}
 
-			global.CurrentSong.LyricsData = lyricsData
+			global.Player.Song.LyricsData = lyricsData
 
 			fullLyrChan <- true
 		}
@@ -96,57 +79,8 @@ func SyncLoop() {
 	// TODO: replace with signal-based communication from D-Bus
 	go func() {
 		for {
-			<-positionCheckTimer.C
-			var initialPosition float64
-			var err error
-			global.CurrentPlayer, err = player.PlayerProviders[global.CurrentConfig.Player.PlayerProvider].GetPlayerInfo()
-			if err != nil {
-				// TODO: logger :)
-				continue
-			}
-
-			initialPosition = global.CurrentPlayer.Position
-			if global.CurrentPlayer.IsPlaying {
-				if global.CurrentConfig.Global.EnableActiveSync {
-					requiredTicks := 10
-					positionInnerCheckTicker.Reset(100 * time.Millisecond)
-					for i := 0; i < requiredTicks; i++ {
-						<-positionInnerCheckTicker.C
-						global.CurrentPlayer, err = player.PlayerProviders[global.CurrentConfig.Player.PlayerProvider].GetPlayerInfo()
-						if err != nil {
-							// TODO: logger :)
-							continue
-						}
-
-						newPosition := global.CurrentPlayer.Position
-						expectedPosition := (initialPosition + 0.1*(float64(i)+1))
-						diff := newPosition - expectedPosition
-						if !(((diff <= 0.21 && diff >= -1.11) || (diff >= 0.89 && diff <= 1.01)) || !global.CurrentPlayer.IsPlaying) {
-							output.OutputControllers[global.CurrentConfig.Global.Output].OnPlayerInfoChange()
-							UpdatePosition(newPosition)
-							break
-						}
-					}
-				} else {
-					positionInnerCheckTicker.Reset(time.Second)
-					<-positionInnerCheckTicker.C
-					global.CurrentPlayer, err = player.PlayerProviders[global.CurrentConfig.Player.PlayerProvider].GetPlayerInfo()
-					if err != nil {
-						// TODO: logger :)
-						continue
-					}
-					newPosition := global.CurrentPlayer.Position
-					diff := newPosition - initialPosition
-					if !(diff >= 0.9 && diff <= 1.1) {
-						output.OutputControllers[global.CurrentConfig.Global.Output].OnPlayerInfoChange()
-						UpdatePosition(newPosition)
-					}
-				}
-				positionInnerCheckTicker.Stop()
-				positionCheckTimer.Reset(1)
-			} else {
-				positionCheckTimer.Reset(time.Second)
-			}
+			<-positionFollowTick
+			UpdatePosition(global.Player.Position)
 		}
 	}()
 
@@ -157,11 +91,11 @@ func SyncLoop() {
 
 			prevLyric := ""
 			count := 1
-			for i, lyric := range global.CurrentSong.LyricsData.Lyrics {
+			for i, lyric := range global.Player.Song.LyricsData.Lyrics {
 				lyric = strings.TrimSpace(strings.ReplaceAll(lyric, "\r", ""))
 
 				// Apply lyrics multiplier
-				if global.CurrentConfig.Global.Output == "piped" && global.CurrentConfig.Output.Piped.ShowRepeatedLyricsMultiplier {
+				if global.Config.Global.Output == "piped" && global.Config.Output.Piped.ShowRepeatedLyricsMultiplier {
 					if lyric == prevLyric && lyric != "" {
 						count++
 					} else {
@@ -170,29 +104,29 @@ func SyncLoop() {
 					}
 
 					if count != 1 {
-						if global.CurrentConfig.Output.Piped.PrintRepeatedLyricsMultiplierToTheRight {
-							lyric = fmt.Sprintf(lyric+" "+global.CurrentConfig.Output.Piped.RepeatedLyricsMultiplierFormat, count)
+						if global.Config.Output.Piped.PrintRepeatedLyricsMultiplierToTheRight {
+							lyric = fmt.Sprintf(lyric+" "+global.Config.Output.Piped.RepeatedLyricsMultiplierFormat, count)
 						} else {
-							lyric = fmt.Sprintf(global.CurrentConfig.Output.Piped.RepeatedLyricsMultiplierFormat+" "+lyric, count)
+							lyric = fmt.Sprintf(global.Config.Output.Piped.RepeatedLyricsMultiplierFormat+" "+lyric, count)
 						}
 					}
 				}
 
-				global.CurrentSong.LyricsData.Lyrics[i] = lyric
+				global.Player.Song.LyricsData.Lyrics[i] = lyric
 			}
 
 			// Romanization
-			if lang := romanization.GetLang(global.CurrentSong.LyricsData.Lyrics); global.CurrentConfig.Lyrics.Romanization.IsEnabled() && lang != 0 {
-				global.CurrentSong.LyricsData.Lyrics = romanization.Romanize(global.CurrentSong.LyricsData.Lyrics, lang)
+			if lang := romanization.GetLang(global.Player.Song.LyricsData.Lyrics); global.Config.Lyrics.Romanization.IsEnabled() && lang != 0 {
+				global.Player.Song.LyricsData.Lyrics = romanization.Romanize(global.Player.Song.LyricsData.Lyrics, lang)
 			}
 
-			if global.CurrentConfig.Lyrics.TimestampOffset != 0 {
-				for i, timestamp := range global.CurrentSong.LyricsData.LyricTimestamps {
-					global.CurrentSong.LyricsData.LyricTimestamps[i] = timestamp + global.CurrentConfig.Lyrics.TimestampOffset
+			if global.Config.Lyrics.TimestampOffset != 0 {
+				for i, timestamp := range global.Player.Song.LyricsData.LyricTimestamps {
+					global.Player.Song.LyricsData.LyricTimestamps[i] = timestamp + global.Config.Lyrics.TimestampOffset
 				}
 			}
 
-			output.OutputControllers[global.CurrentConfig.Global.Output].OnSongInfoChange()
+			output.OutputControllers[global.Config.Global.Output].OnSongInfoChange()
 
 			timeAfterGettingLyrics := time.Now()
 			position += math.Max(timeAfterGettingLyrics.Sub(timeBeforeGettingLyrics).Seconds(), 0) + 0.1 // tests have shown that additional 0.1 is required to look good

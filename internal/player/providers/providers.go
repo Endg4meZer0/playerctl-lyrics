@@ -5,9 +5,9 @@ import (
 )
 
 type PlayerProvider interface {
-	GetPlayerInfo() (structs.Player, error)
 	// TODO: replace with signal-based getter
-	GetSongInfo() (structs.Song, error)
+	GetInfo() (structs.Player, error)
+	Subscribe() <-chan structs.Player
 }
 
 var PlayerProviders map[string]PlayerProvider = map[string]PlayerProvider{
