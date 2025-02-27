@@ -1,4 +1,4 @@
-# App is undergoing a huge refactor and feature additions before v0.3.0, check other branches for more info
+# This repository is archived in favor of currently developing [lrcsnc](https://github.com/Endg4meZer0/lrcsnc). You should prefer using lrcsnc instead of trying to build and run playerctl-lyrics.
 
 # playerctl-lyrics
 Gets data using playerctl and the currently playing song's synced lyrics from https://lrclib.net/ (if there are). Lyrics are displayed in sync with player's position.
